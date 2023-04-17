@@ -59,8 +59,18 @@ impl Game {
             None
         }
     }
+    pub fn is_valid_move(&mut self, from: (i8,i8), to: (i8,i8)) -> bool {
+        if Self::is_valid_position(to.0, to.1)
+            && Self::is_valid_position(from.0, from.1)
+            && self[to].is_empty() && self[from].is_unit() {
+            ((from.0 - to.0).abs() == 1 && (from.1 == to.1)) ||
+            ((from.1 - to.1).abs() == 1 && (from.0 == to.0))
+        } else {
+            false
+        }
+    }
     pub fn move_unit(&mut self, from: (i8,i8), to: (i8,i8)) -> bool {
-        if self[to].is_empty() && self[from].is_unit() {
+        if self.is_valid_move(from, to) {
             self[to] = self[from];
             self[from] = Cell::Empty;
             true

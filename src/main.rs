@@ -10,6 +10,8 @@ fn main() {
         if let Some((from,to)) = game.get_move_from_stdin() {
             if game.move_unit(from, to) {
                 game.next_player();
+            } else {
+                println!("Invalid move!");
             }
         }
     }
