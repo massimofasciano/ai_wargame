@@ -5,5 +5,12 @@ fn main() {
 
     game[(3,4)] = Cell::Unit{player: game.player(),unit: Unit::new(UnitType::AI)};
 
-    println!("{}",game);
+    loop {
+        println!("{}",game);
+        if let Some((from,to)) = game.get_move_from_stdin() {
+            if game.move_unit(from, to) {
+                game.next_player();
+            }
+        }
+    }
 }

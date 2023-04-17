@@ -47,14 +47,41 @@ impl Game {
     pub fn is_valid_position(row: i8, col: i8) -> bool {
         row >= 0 && col >= 0 && row < BOARD_DIM && col < BOARD_DIM
     }
+    pub fn get_move_from_stdin(&self) -> Option<((i8,i8),(i8,i8))> {
+        println!("Player {}, enter next move (1 coord per line, 4 lines)...",self.player());
+        let r1 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
+        let c1 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
+        let r2 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
+        let c2 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
+        if r1.is_ok() && c1.is_ok() && r2.is_ok() && c2.is_ok() {
+            Some(((r1.unwrap(),c1.unwrap()),(r2.unwrap(),c2.unwrap())))
+        } else {
+            None
+        }
+    }
+    pub fn move_unit(&mut self, from: (i8,i8), to: (i8,i8)) -> bool {
+        if self[to].is_empty() && self[from].is_unit() {
+            self[to] = self[from];
+            self[from] = Cell::Empty;
+            true
+        } else {
+            false
+        }
+    }
 }
 
 impl std::fmt::Display for Game {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f,"Next player: {}",self.player())?;
+        write!(f,"    ")?;
+        for col in 0..BOARD_DIM {
+            write!(f," {:>2} ",col)?;
+        }
+        writeln!(f,"")?;
         for row in 0..BOARD_DIM {
+            write!(f,"{:>2}: ",row)?;
             for col in 0..BOARD_DIM {
-                write!(f,"{} ",self[(row,col)])?;
+                write!(f," {}",self[(row,col)])?;
             }
             writeln!(f,"")?;
         }
@@ -141,8 +168,17 @@ pub enum Cell {
 }
 
 impl Cell {
-    const fn new() -> Self {
+    pub const fn new() -> Self {
         Self::Empty
+    }
+    pub fn is_empty(&self) -> bool {
+        *self == Self::Empty
+    }
+    pub fn is_unit(&self) -> bool {
+        match self {
+            Self::Unit { player: _, unit: _ } => true,
+            _ => false,
+        }
     }
 }
 
