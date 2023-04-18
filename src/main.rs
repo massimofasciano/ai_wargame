@@ -17,24 +17,24 @@ fn main() {
             break;
         }
 
-        loop {
-            use rand::Rng;
-            let mut rng = rand::thread_rng();
-            let md = game.dim();
-            let from = (rng.gen_range(0..md), rng.gen_range(0..md));
-            let to = (rng.gen_range(0..md), rng.gen_range(0..md));
-            if !game.perform_action(from, to) {
-                // println!("Invalid move!");
-                continue;
-            }
-            break;
-        }
-
-        // if let Some((from,to)) = game.get_move_from_stdin() {
+        // loop {
+        //     use rand::Rng;
+        //     let mut rng = rand::thread_rng();
+        //     let md = game.dim();
+        //     let from = (rng.gen_range(0..md), rng.gen_range(0..md));
+        //     let to = (rng.gen_range(0..md), rng.gen_range(0..md));
         //     if !game.perform_action(from, to) {
-        //         println!("Invalid move!");
+        //         // println!("Invalid move!");
+        //         continue;
         //     }
+        //     break;
         // }
+
+        if let Some((from,to)) = game.parse_move_stdin() {
+            if !game.perform_action(from, to) {
+                println!("Invalid move!");
+            }
+        }
 
     }
 }

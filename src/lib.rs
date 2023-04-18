@@ -1,3 +1,7 @@
+use std::io::Write;
+
+use derive_more::Display;
+
 const BOARD_DIM: Dim = 10;
 const BOARD_SIZE: usize = BOARD_DIM as usize*BOARD_DIM as usize;
 // static mut TEMP_CELL : Cell = Cell::new();
@@ -105,18 +109,6 @@ impl Game {
     pub fn is_valid_position((row,col) : (i8, i8)) -> bool {
         row >= 0 && col >= 0 && row < BOARD_DIM && col < BOARD_DIM
     }
-    pub fn get_move_from_stdin(&self) -> Option<(Coord,Coord)> {
-        println!("Player {}, enter next move (1 coord per line, 4 lines)...",self.player());
-        let r1 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
-        let c1 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
-        let r2 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
-        let c2 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
-        if r1.is_ok() && c1.is_ok() && r2.is_ok() && c2.is_ok() {
-            Some(((r1.unwrap(),c1.unwrap()),(r2.unwrap(),c2.unwrap())))
-        } else {
-            None
-        }
-    }
     pub fn is_valid_move(&mut self, from: Coord, to: Coord) -> bool {
         Self::neighbors(from, to) &&
         self[to].is_empty() && self[from].is_unit() &&
@@ -199,6 +191,25 @@ impl Game {
             None
         }
     }
+    pub fn parse_move_stdin(&self) -> Option<(Coord,Coord)> {
+        print!("{} player, enter your next move [ex: a6 d9] : ",self.player());
+        std::io::stdout().flush().unwrap();
+        Self::parse_move(&std::io::stdin().lines().next().unwrap().unwrap())
+    }
+    pub fn parse_move(move_str: &str) -> Option<(Coord,Coord)> {
+        use regex::Regex;
+        let re = Regex::new(r#"[ \(\[]*([A-Za-z])[ ,;]*(\d+)[ \)\]]*[;,]*[ \(\[]*([A-Za-z])[ ,;]*(\d+)[ \)\]]*"#).unwrap();
+        if let Some(caps) = re.captures(move_str) {
+            assert_eq!(caps.len(),5);
+            let r1 = caps[1].chars().next().unwrap().to_ascii_uppercase() as Dim - 65;
+            let c1 = caps[2].parse::<Dim>().unwrap();
+            let r2 = caps[3].chars().next().unwrap().to_ascii_uppercase() as Dim - 65;
+            let c2 = caps[4].parse::<Dim>().unwrap();
+            Some(((r1,c1),(r2,c2)))
+        } else {
+            None
+        }
+    }
     pub fn random_drop(&mut self) -> bool {
         if self.drop_prob.is_none() {
             return false;
@@ -276,7 +287,7 @@ impl std::fmt::Display for Game {
         }
         writeln!(f,"")?;
         for row in 0..BOARD_DIM {
-            write!(f,"{:>2}: ",row)?;
+            write!(f,"{:>2}: ",(row as u8 +'A' as u8) as char)?;
             for col in 0..BOARD_DIM {
                 write!(f," {}",self[(row,col)])?;
             }
@@ -291,46 +302,39 @@ impl std::fmt::Display for Cell {
         use Cell::*;
         write!(f, "{}", match self {
             Empty => " . ".to_string(),
-            // Blocked => "***".to_string(),
-            // Outside => "out".to_string(),
-            // Supplies => "sup".to_string(),
-            Unit { player, unit } => format!("{}{}",player,unit),
+            Unit { player, unit } => format!("{}{}{:1}",
+                player.to_char().to_ascii_lowercase(),
+                unit.unit_type.to_char().to_ascii_uppercase(),unit.health),
         })
     }
 }
 
 impl std::fmt::Display for Unit {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.unit_type)?;
-        if self.health < 10 {
-            write!(f, "{}", self.health)?;
-        } else {
-            write!(f, "!")?;
-        }
-        Ok(())
+        write!(f, "{}:{}", self.unit_type,self.health)
     }
 }
 
-impl std::fmt::Display for UnitType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl UnitType {
+    fn to_char(&self) -> char {
         use UnitType::*;
-        write!(f, "{}", match self {
-            AI => "A",
-            Hacker => "H",
-            Repair => "R",
-            Tank => "T",
-            Drone => "D",
-            Soldier => "S",
-        })
+        match self {
+            AI => 'A',
+            Hacker => 'H',
+            Repair => 'R',
+            Tank => 'T',
+            Drone => 'D',
+            Soldier => 'S',
+        }
     }
 }
 
-impl std::fmt::Display for Player {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Player::Blue => "b",
-            Player::Red => "r",
-        })
+impl Player {
+    fn to_char(&self) -> char {
+        match self {
+            Player::Blue => 'B',
+            Player::Red => 'R',
+        }
     }
 }
 
@@ -349,7 +353,7 @@ impl std::ops::IndexMut<Coord> for Game {
     }
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Default, Clone, Copy)]
+#[derive(Debug, PartialEq, PartialOrd, Default, Clone, Copy, Display)]
 pub enum Player {
     #[default]
     Blue,
@@ -360,9 +364,6 @@ pub enum Player {
 pub enum Cell {
     #[default]
     Empty,
-    // Blocked,
-    // Outside,
-    // Supplies,
     Unit { player:Player, unit:Unit },
 }
 
@@ -434,7 +435,7 @@ pub struct Unit {
     health : Health,
 }
 
-#[derive(Debug, PartialEq, PartialOrd,Default, Clone, Copy)]
+#[derive(Debug, PartialEq, PartialOrd,Default, Clone, Copy, Display)]
 pub enum UnitType {
     AI,
     Hacker,
