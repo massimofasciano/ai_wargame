@@ -1,4 +1,4 @@
-const BOARD_DIM: i8 = 8;
+const BOARD_DIM: i8 = 10;
 const BOARD_SIZE: usize = BOARD_DIM as usize*BOARD_DIM as usize;
 static mut TEMP_CELL : Cell = Cell::new();
 
@@ -22,15 +22,26 @@ impl Default for Game {
 
 impl Game {
     pub fn new() -> Self {
+        let md = BOARD_DIM-1;
         let mut game = Self::default();
-        // let init = [Repair,AI,Hacker,Hacker,AI,Repair,Soldier,Tank,Drone,Drone,Tank,Soldier];
-        // let init_iter = init.iter();
-        // for i in 1..7 {
-        //     game[(0,i)]=Cell::Unit{player:Cell::Player,unit: init_iter.next().unwrap();
-        // }
-        // for i  in 1..7 {
-        //     game[(1,i)]=init_iter.next().unwrap();
-        // }
+        let ai = Unit::new(UnitType::AI);
+        let hacker = Unit::new(UnitType::Hacker);
+        let repair = Unit::new(UnitType::Repair);
+        let tank = Unit::new(UnitType::Tank);
+        let soldier = Unit::new(UnitType::Soldier);
+        let drone = Unit::new(UnitType::Drone);
+        let init = vec![
+            (0,2,&ai), (0,md-2,&ai),
+            (1,2,&tank), (1,md-2,&tank),
+            (0,1,&repair), (0,md-1,&repair),
+            (0,3,&hacker), (0,md-3,&hacker),
+            (1,1,&soldier), (1,md-1,&soldier),
+            (1,3,&drone), (1,md-3,&drone),
+        ];
+        for (row,col,unit) in init {
+            game[(row,col)] = Cell::Unit{player: Player::Blue,unit: unit.clone()};
+            game[(md-row,col)] = Cell::Unit{player: Player::Red,unit: unit.clone()};
+        }
         game
     }
     pub fn get_cell(&self, coord : (i8, i8)) -> Option<&Cell> {
@@ -101,6 +112,13 @@ impl Game {
         Self::is_valid_position(coord0) && Self::is_valid_position(coord1) && 
         (coord1.0 - coord0.0).abs() <= 1 && (coord1.1 - coord0.1).abs() <= 1
     }
+    pub fn in_range(range: u8, coord0 : Coord, coord1 : Coord) -> bool {
+        coord0 == coord1 || // we consider our own position as in range
+        Self::is_valid_position(coord0) && 
+        Self::is_valid_position(coord1) && 
+        (coord1.0 - coord0.0).abs() as u8 <= range && 
+        (coord1.1 - coord0.1).abs() as u8 <= range
+    }
     pub fn move_unit(&mut self, from: Coord, to: Coord) -> bool {
         if self.is_valid_move(from, to) {
             self[to] = self[from];
@@ -112,11 +130,7 @@ impl Game {
     }
     pub fn remove_dead(&mut self) {
         for cell in self.board.iter_mut() {
-            if let Some((_, unit)) = cell.unit() {
-                if unit.health == 0 {
-                    *cell = Cell::Empty;
-                }
-            }
+            cell.remove_dead();
         }
     }
     pub fn resolve_conflicts(&mut self) {
@@ -145,6 +159,67 @@ impl Game {
                 }
             }
         }
+    }
+    pub fn winner(&self) -> Option<Player>{
+        let mut ai_red = false;
+        let mut ai_blue = false;
+        for c in self.board.iter() {
+            if let Some((player,unit)) = c.unit() {
+                if player == &Player::Red && unit.unit_type == UnitType::AI {
+                    ai_red = true;
+                }
+                if player == &Player::Blue && unit.unit_type == UnitType::AI {
+                    ai_blue = true;
+                }
+            }
+            if ai_blue && ai_red { break; }
+        }
+        if ai_blue && !ai_red {
+            Some(Player::Blue)
+        } else if ai_red && !ai_blue {
+            Some(Player::Red)
+        } else {
+            None
+        }
+    }
+    pub fn perform_action(&mut self, from: Coord, to: Coord) -> bool {
+        let valid = if Self::in_range(1, from, to) && 
+            self[from].is_unit() && 
+            self.player() == self[from].player().unwrap() 
+        {
+            // it's our turn and we are acting on our own unit
+            if from == to {
+                // destination is same as source => we wish to skip this move
+                true
+            } else if self[to].is_empty() {
+                // destination empty so this is a move
+                self.move_unit(from, to)
+            } else if self[to].is_unit() {
+                // destination is a unit
+                let (source, target) = self.get_2_cells_mut(from, to).unwrap();
+                let (player_source,unit_source) = source.unit_mut().unwrap();
+                let (player_target,unit_target) = target.unit_mut().unwrap();
+                if player_source != player_target {
+                    // it's an opposing unit so we try to damage it (it will damage us back)
+                    unit_source.apply_damage(unit_target);
+                    unit_target.apply_damage(unit_source);
+                    source.remove_dead();
+                    target.remove_dead();
+                } else {
+                    // it's our unit so we try to repair it
+                    unit_source.apply_repair(unit_target);
+                }
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+        if valid {
+            self.next_player();
+        };
+        valid
     }
 }
 
@@ -276,6 +351,13 @@ impl Cell {
             _ => None,
         }
     }
+    pub fn remove_dead(&mut self) {
+        if let Some((_, unit)) = self.unit() {
+            if unit.health == 0 {
+                *self = Cell::Empty;
+            }
+        }
+    }
 }
 
 type Health = u8;
@@ -316,13 +398,14 @@ impl Unit {
         };
         Self { unit_type, health }
     }
-    pub fn apply_repair(&mut self, target: &mut Self) {
+    pub fn apply_repair(&mut self, target: &mut Self) -> u8 {
         let repair = self.repair(target);
         if repair + target.health < 9 {
             target.health += repair;
         } else {
             target.health = 9;
         }
+        repair
     }
     pub fn repair(&self, target: &Self) -> Health {
         use UnitType::*;
@@ -338,13 +421,14 @@ impl Unit {
             _ => 0,
         }
     }
-    pub fn apply_damage(&mut self, target: &mut Self) {
+    pub fn apply_damage(&mut self, target: &mut Self) -> u8 {
         let damage = self.damage(target);
         if damage < target.health {
             target.health -= damage;
         } else {
             target.health = 0;
         }
+        damage
     }
     pub fn damage(&self, target: &Self) -> Health {
         use UnitType::*;
