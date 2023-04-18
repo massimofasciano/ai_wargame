@@ -92,18 +92,14 @@ impl Game {
         }
     }
     pub fn is_valid_move(&mut self, from: Coord, to: Coord) -> bool {
-        Self::is_valid_position(to)
-            && Self::is_valid_position(from)
-            && self[to].is_empty() && self[from].is_unit() 
-            && Self::neighbors(from, to) &&
-            self.player() == self[from].player().unwrap()
+        Self::neighbors(from, to) &&
+        self[to].is_empty() && self[from].is_unit() &&
+        self.player() == self[from].player().unwrap()
     }
     pub fn neighbors(coord0 : Coord, coord1 : Coord) -> bool {
-        Self::is_valid_position(coord0) &&
-        Self::is_valid_position(coord1) && (
-            ((coord1.0 - coord0.0).abs() == 1 && (coord1.1 == coord0.1)) ||
-            ((coord1.1 - coord0.1).abs() == 1 && (coord1.0 == coord0.0))
-        )
+        coord0 != coord1 &&
+        Self::is_valid_position(coord0) && Self::is_valid_position(coord1) && 
+        (coord1.0 - coord0.0).abs() <= 1 && (coord1.1 - coord0.1).abs() <= 1
     }
     pub fn move_unit(&mut self, from: Coord, to: Coord) -> bool {
         if self.is_valid_move(from, to) {
@@ -116,7 +112,7 @@ impl Game {
     }
     pub fn remove_dead(&mut self) {
         for cell in self.board.iter_mut() {
-            if let Some((_, unit)) = cell.unit_mut() {
+            if let Some((_, unit)) = cell.unit() {
                 if unit.health == 0 {
                     *cell = Cell::Empty;
                 }
@@ -126,22 +122,23 @@ impl Game {
     pub fn resolve_conflicts(&mut self) {
         for row in 0..BOARD_DIM {
             for col in 0..BOARD_DIM {
-                if self[(row,col)].is_unit() {
-                    for (rd, cd) in [(-1,0),(1,0),(0,-1),(0,1)] {
-                        let row_target = row + rd;
-                        let col_target = col + cd; 
-                        if Self::is_valid_position((row_target,col_target)) 
-                            && self[(row_target,col_target)].is_unit() 
-                        {
-                            let (source, target) = self.get_2_cells_mut((row,col), (row_target,col_target)).unwrap();
-                            let (player_source,unit_source) = source.unit_mut().unwrap();
-                            let (player_target,unit_target) = target.unit_mut().unwrap();
-                            if player_source != player_target {
-                                // opponents
-                                unit_source.apply_damage(unit_target);
-                            } else {
-                                // friends
-                                unit_source.apply_repair(unit_target);
+                let coord_source = (row,col);
+                if self[coord_source].is_unit() {
+                    for rd in -1..=1 {
+                        for cd in -1..=1 {
+                            let coord_target = (row + rd, col + cd);
+                            if Self::is_valid_position(coord_target) && self[coord_target].is_unit() && coord_target != coord_source
+                            {
+                                let (source, target) = self.get_2_cells_mut(coord_source, coord_target).unwrap();
+                                let (player_source,unit_source) = source.unit_mut().unwrap();
+                                let (player_target,unit_target) = target.unit_mut().unwrap();
+                                if player_source != player_target {
+                                    // opponents
+                                    unit_source.apply_damage(unit_target);
+                                } else {
+                                    // friends
+                                    unit_source.apply_repair(unit_target);
+                                }
                             }
                         }
                     }
