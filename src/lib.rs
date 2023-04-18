@@ -1,7 +1,3 @@
-use std::io::Write;
-
-use derive_more::Display;
-
 const BOARD_DIM: Dim = 10;
 const BOARD_SIZE: usize = BOARD_DIM as usize*BOARD_DIM as usize;
 // static mut TEMP_CELL : Cell = Cell::new();
@@ -192,6 +188,7 @@ impl Game {
         }
     }
     pub fn parse_move_stdin(&self) -> Option<(Coord,Coord)> {
+        use std::io::Write;
         print!("{} player, enter your next move [ex: a6 d9] : ",self.player());
         std::io::stdout().flush().unwrap();
         Self::parse_move(&std::io::stdin().lines().next().unwrap().unwrap())
@@ -315,28 +312,36 @@ impl std::fmt::Display for Unit {
     }
 }
 
-impl UnitType {
+trait DisplayFirstLetter : std::fmt::Display {
     fn to_char(&self) -> char {
-        use UnitType::*;
-        match self {
-            AI => 'A',
-            Hacker => 'H',
-            Repair => 'R',
-            Tank => 'T',
-            Drone => 'D',
-            Soldier => 'S',
-        }
+        self.to_string().chars().next().unwrap()
     }
 }
 
-impl Player {
-    fn to_char(&self) -> char {
-        match self {
-            Player::Blue => 'B',
-            Player::Red => 'R',
-        }
-    }
-}
+impl DisplayFirstLetter for UnitType {}
+//     fn to_char(&self) -> char {
+//         self.to_string().chars().next().unwrap()
+//         // use UnitType::*;
+//         // match self {
+//         //     AI => 'A',
+//         //     Hacker => 'H',
+//         //     Repair => 'R',
+//         //     Tank => 'T',
+//         //     Drone => 'D',
+//         //     Soldier => 'S',
+//         // }
+//     }
+// }
+
+impl DisplayFirstLetter for Player {}
+//     fn to_char(&self) -> char {
+//         self.to_string().chars().next().unwrap()
+//         // match self {
+//         //     Player::Blue => 'B',
+//         //     Player::Red => 'R',
+//         // }
+//     }
+// }
 
 impl std::ops::Index<Coord> for Game {
     type Output = Cell;
@@ -353,7 +358,8 @@ impl std::ops::IndexMut<Coord> for Game {
     }
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Default, Clone, Copy, Display)]
+#[derive(Debug, PartialEq, PartialOrd, Default, Clone, Copy)]
+#[derive(derive_more::Display)]
 pub enum Player {
     #[default]
     Blue,
@@ -435,7 +441,8 @@ pub struct Unit {
     health : Health,
 }
 
-#[derive(Debug, PartialEq, PartialOrd,Default, Clone, Copy, Display)]
+#[derive(Debug, PartialEq, PartialOrd,Default, Clone, Copy)]
+#[derive(derive_more::Display)]
 pub enum UnitType {
     AI,
     Hacker,
