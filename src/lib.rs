@@ -196,6 +196,28 @@ impl Game {
             None
         }
     }
+    pub fn random_drop(&mut self) -> bool {
+        use rand::Rng;
+        if rand::thread_rng().gen_range(0..100) < 5 {
+            use UnitType::*;
+            let unit_types = [Hacker,Repair];
+            let unit_type = unit_types[rand::thread_rng().gen_range(0..unit_types.len())];
+            let dest = (rand::thread_rng().gen_range(0..self.dim()),rand::thread_rng().gen_range(0..self.dim()));
+            let mut new = Cell::new_unit(self.player(), unit_type);
+            println!("random drop of type {} at ({},{})!",unit_type,dest.0,dest.1);
+            let target = &mut self[dest];
+            if target.is_unit() {
+                new.interact(target);
+                println!("random interaction at ({},{})!",dest.0,dest.1);
+            }
+            if target.is_empty() {
+                *target = new;
+                println!("random insertion at ({},{})!",dest.0,dest.1);
+            } 
+            return true;
+        }
+        false
+    }
     pub fn perform_action(&mut self, from: Coord, to: Coord) -> bool {
         let valid = if Self::in_range(1, from, to) && 
             self[from].is_unit() && 
@@ -231,6 +253,7 @@ impl Game {
             false
         };
         if valid {
+            self.random_drop();
             self.next_player();
         };
         valid
@@ -328,15 +351,21 @@ pub enum Player {
 pub enum Cell {
     #[default]
     Empty,
-    Blocked,
+    // Blocked,
     Outside,
-    Supplies,
+    // Supplies,
     Unit { player:Player, unit:Unit },
 }
 
 impl Cell {
     pub const fn new() -> Self {
         Self::Empty
+    }
+    pub fn new_unit(player: Player, unit_type: UnitType) -> Self {
+        Self::Unit { 
+            player,
+            unit: Unit::new(unit_type),
+        }
     }
     pub fn is_empty(&self) -> bool {
         *self == Self::Empty
@@ -370,6 +399,20 @@ impl Cell {
             if unit.health == 0 {
                 *self = Cell::Empty;
             }
+        }
+    }
+    pub fn interact(&mut self, target: &mut Self) {
+        let (player_source,unit_source) = self.unit_mut().unwrap();
+        let (player_target,unit_target) = target.unit_mut().unwrap();
+        if player_source != player_target {
+            // it's an opposing unit so we try to damage it (it will damage us back)
+            unit_source.apply_damage(unit_target);
+            unit_target.apply_damage(unit_source);
+            self.remove_dead();
+            target.remove_dead();
+        } else {
+            // it's our unit so we try to repair it
+            unit_source.apply_repair(unit_target);
         }
     }
 }

@@ -7,6 +7,15 @@ fn main() {
     loop {
         println!("{}",game);
 
+        if let Some(winner) = game.winner() {
+            println!("{} in {} moves!", if winner.is_none() {
+                "draw".to_string()
+            } else {
+                format!("{} wins",winner.unwrap())
+            }, game.total_moves());
+            break;
+        }
+
         loop {
             let md = game.dim();
             let from = (rand::thread_rng().gen_range(0..md),rand::thread_rng().gen_range(0..md));
@@ -24,13 +33,5 @@ fn main() {
         //     }
         // }
 
-        if let Some(winner) = game.winner() {
-            println!("{} in {} moves!", if winner.is_none() {
-                "draw".to_string()
-            } else {
-                format!("{} wins",winner.unwrap())
-            }, game.total_moves());
-            break;
-        }
     }
 }
