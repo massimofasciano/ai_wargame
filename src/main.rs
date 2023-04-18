@@ -4,6 +4,7 @@ fn main() {
     // let drop_prob = None;
     let drop_prob = Some(0.05);
     let mut game = Game::new(drop_prob);
+    let play_random = std::env::args().len() > 1;
 
     loop {
         println!();
@@ -19,26 +20,31 @@ fn main() {
             break;
         }
 
-        // loop {
-        //     use rand::Rng;
-        //     let mut rng = rand::thread_rng();
-        //     let md = game.dim();
-        //     let from = (rng.gen_range(0..md), rng.gen_range(0..md));
-        //     let to = (rng.gen_range(0..md), rng.gen_range(0..md));
-        //     if !game.perform_action(from, to) {
-        //         // println!("Invalid move!");
-        //         continue;
-        //     }
-        //     break;
-        // }
+        if play_random {
 
-        if let Some((from,to)) = game.parse_move_stdin() {
-            if !game.perform_action(from, to) {
-                println!("Invalid move!");
+            loop {
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                let md = game.dim();
+                let from = (rng.gen_range(0..md), rng.gen_range(0..md));
+                let to = (rng.gen_range(0..md), rng.gen_range(0..md));
+                if !game.perform_action(from, to) {
+                    // println!("Invalid move!");
+                    continue;
+                }
+                break;
             }
-        } else {
-            println!("Invalid input!");
-        }
 
+        } else {
+
+            if let Some((from,to)) = game.parse_move_stdin() {
+                if !game.perform_action(from, to) {
+                    println!("Invalid move!");
+                }
+            } else {
+                println!("Invalid input!");
+            }
+
+        }
     }
 }
