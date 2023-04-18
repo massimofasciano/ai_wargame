@@ -6,7 +6,9 @@ fn main() {
     let mut game = Game::new(drop_prob);
 
     loop {
-        println!("{}",game);
+        println!();
+        game.pretty_print();
+        println!();
 
         if let Some(winner) = game.winner() {
             println!("{} in {} moves!", if winner.is_none() {
@@ -34,6 +36,8 @@ fn main() {
             if !game.perform_action(from, to) {
                 println!("Invalid move!");
             }
+        } else {
+            println!("Invalid input!");
         }
 
     }

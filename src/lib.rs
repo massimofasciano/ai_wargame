@@ -1,6 +1,5 @@
 const BOARD_DIM: Dim = 10;
 const BOARD_SIZE: usize = BOARD_DIM as usize*BOARD_DIM as usize;
-// static mut TEMP_CELL : Cell = Cell::new();
 
 type Board = [Cell;BOARD_SIZE];
 type Dim = i8;
@@ -136,33 +135,33 @@ impl Game {
             cell.remove_dead();
         }
     }
-    pub fn resolve_conflicts(&mut self) {
-        for row in 0..BOARD_DIM {
-            for col in 0..BOARD_DIM {
-                let coord_source = (row,col);
-                if self[coord_source].is_unit() {
-                    for rd in -1..=1 {
-                        for cd in -1..=1 {
-                            let coord_target = (row + rd, col + cd);
-                            if Self::is_valid_position(coord_target) && self[coord_target].is_unit() && coord_target != coord_source
-                            {
-                                let (source, target) = self.get_2_cells_mut(coord_source, coord_target).unwrap();
-                                let (player_source,unit_source) = source.unit_mut().unwrap();
-                                let (player_target,unit_target) = target.unit_mut().unwrap();
-                                if player_source != player_target {
-                                    // opponents
-                                    unit_source.apply_damage(unit_target);
-                                } else {
-                                    // friends
-                                    unit_source.apply_repair(unit_target);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    // pub fn resolve_conflicts(&mut self) {
+    //     for row in 0..BOARD_DIM {
+    //         for col in 0..BOARD_DIM {
+    //             let coord_source = (row,col);
+    //             if self[coord_source].is_unit() {
+    //                 for rd in -1..=1 {
+    //                     for cd in -1..=1 {
+    //                         let coord_target = (row + rd, col + cd);
+    //                         if Self::is_valid_position(coord_target) && self[coord_target].is_unit() && coord_target != coord_source
+    //                         {
+    //                             let (source, target) = self.get_2_cells_mut(coord_source, coord_target).unwrap();
+    //                             let (player_source,unit_source) = source.unit_mut().unwrap();
+    //                             let (player_target,unit_target) = target.unit_mut().unwrap();
+    //                             if player_source != player_target {
+    //                                 // opponents
+    //                                 unit_source.apply_damage(unit_target);
+    //                             } else {
+    //                                 // friends
+    //                                 unit_source.apply_repair(unit_target);
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
     pub fn winner(&self) -> Option<Option<Player>>{
         let mut ai_red = false;
         let mut ai_blue = false;
@@ -273,22 +272,29 @@ impl Game {
         };
         valid
     }
+    pub fn pretty_print(&self) {
+        println!("Next player: {}",self.player());
+        print!("    ");
+        for col in 0..BOARD_DIM {
+            print!(" {:>2} ",col);
+        }
+        println!();
+        for row in 0..BOARD_DIM {
+            print!("{:>2}: ",(row as u8 +'A' as u8) as char);
+            for col in 0..BOARD_DIM {
+                let cell = self[(row,col)];
+                print!(" {}",cell.to_pretty_compact_string());
+            }
+            println!();
+        }
+    }
 }
 
 impl std::fmt::Display for Game {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f,"Next player: {}",self.player())?;
-        write!(f,"    ")?;
-        for col in 0..BOARD_DIM {
-            write!(f," {:>2} ",col)?;
-        }
-        writeln!(f,"")?;
-        for row in 0..BOARD_DIM {
-            write!(f,"{:>2}: ",(row as u8 +'A' as u8) as char)?;
-            for col in 0..BOARD_DIM {
-                write!(f," {}",self[(row,col)])?;
-            }
-            writeln!(f,"")?;
+        write!(f,"{}",self.player().to_char())?;
+        for c in self.board.iter() {
+            write!(f,":{}",c)?;
         }
         Ok(())
     }
@@ -296,19 +302,7 @@ impl std::fmt::Display for Game {
 
 impl std::fmt::Display for Cell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use Cell::*;
-        write!(f, "{}", match self {
-            Empty => " . ".to_string(),
-            Unit { player, unit } => format!("{}{}{:1}",
-                player.to_char().to_ascii_lowercase(),
-                unit.unit_type.to_char().to_ascii_uppercase(),unit.health),
-        })
-    }
-}
-
-impl std::fmt::Display for Unit {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.unit_type,self.health)
+        write!(f, "{}", self.to_compact_string())
     }
 }
 
@@ -319,29 +313,7 @@ trait DisplayFirstLetter : std::fmt::Display {
 }
 
 impl DisplayFirstLetter for UnitType {}
-//     fn to_char(&self) -> char {
-//         self.to_string().chars().next().unwrap()
-//         // use UnitType::*;
-//         // match self {
-//         //     AI => 'A',
-//         //     Hacker => 'H',
-//         //     Repair => 'R',
-//         //     Tank => 'T',
-//         //     Drone => 'D',
-//         //     Soldier => 'S',
-//         // }
-//     }
-// }
-
 impl DisplayFirstLetter for Player {}
-//     fn to_char(&self) -> char {
-//         self.to_string().chars().next().unwrap()
-//         // match self {
-//         //     Player::Blue => 'B',
-//         //     Player::Red => 'R',
-//         // }
-//     }
-// }
 
 impl std::ops::Index<Coord> for Game {
     type Output = Cell;
@@ -429,6 +401,22 @@ impl Cell {
         } else {
             // it's our unit so we try to repair it
             unit_source.apply_repair(unit_target);
+        }
+    }
+    pub fn to_pretty_compact_string(&self) -> String {
+        if self.is_empty() {
+            String::from(" . ")
+        } else {
+            self.to_compact_string()
+        }
+    }
+    pub fn to_compact_string(&self) -> String {
+        use Cell::*;
+        match self {
+            Empty => String::from(""),
+            Unit { player, unit } => format!("{}{}{:1}",
+                player.to_char().to_ascii_lowercase(),
+                unit.unit_type.to_char().to_ascii_uppercase(),unit.health),
         }
     }
 }
