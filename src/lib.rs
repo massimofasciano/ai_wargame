@@ -19,34 +19,6 @@ impl Default for Game {
     }
 }
 
-pub trait SliceExt {
-    type Item;
-
-    fn get_two_mut(&mut self, index0: usize, index1: usize) -> (&mut Self::Item, &mut Self::Item);
-}
-
-impl<T> SliceExt for [T] {
-    type Item = T;
-
-    fn get_two_mut(&mut self, index0: usize, index1: usize) -> (&mut Self::Item, &mut Self::Item) {
-        match index0.cmp(&index1) {
-            std::cmp::Ordering::Less => {
-                let mut iter = self.iter_mut();
-                let item0 = iter.nth(index0).unwrap();
-                let item1 = iter.nth(index1 - index0 - 1).unwrap();
-                (item0, item1)
-            }
-            std::cmp::Ordering::Equal => panic!("[T]::get_two_mut(): received same index twice ({})", index0),
-            std::cmp::Ordering::Greater => {
-                let mut iter = self.iter_mut();
-                let item1 = iter.nth(index1).unwrap();
-                let item0 = iter.nth(index0 - index1 - 1).unwrap();
-                (item0, item1)
-            }
-        }
-    }
-}
-
 impl Game {
     pub fn get_cell(&self, row: i8, col: i8) -> Option<&Cell> {
         if Self::is_valid_position(row,col) {
@@ -62,15 +34,20 @@ impl Game {
             None
         }
     }
-    pub fn get_cells_mut(&mut self, cell0: (i8,i8), cell1: (i8,i8)) -> Option<(&mut Cell, &mut Cell)> {
+    pub fn get_2_cells_mut(&mut self, cell0: (i8,i8), cell1: (i8,i8)) -> Option<(&mut Cell, &mut Cell)> {
         if Self::is_valid_position(cell0.0,cell0.1) &&
             Self::is_valid_position(cell1.0,cell1.1) &&
             cell0 != cell1
         {
-            Some(self.board.get_two_mut(
-                cell0.0 as usize*BOARD_DIM as usize+cell0.1 as usize,
-                cell1.0 as usize*BOARD_DIM as usize+cell1.1 as usize)
-            )
+            let idx0 = cell0.0 as usize*BOARD_DIM as usize+cell0.1 as usize;
+            let idx1 = cell1.0 as usize*BOARD_DIM as usize+cell1.1 as usize;
+            let ref_mut_0;
+            let ref_mut_1;
+            unsafe {
+                ref_mut_0 = &mut *(self.board.get_unchecked_mut(idx0) as *mut _);
+                ref_mut_1 = &mut *(self.board.get_unchecked_mut(idx1) as *mut _);
+            }
+            Some((ref_mut_0, ref_mut_1))
         } else {
             None
         }
@@ -136,23 +113,21 @@ impl Game {
         for row in 0..BOARD_DIM {
             for col in 0..BOARD_DIM {
                 if self[(row,col)].is_unit() {
-                    // println!("unit at {} {}",row,col);
                     for (rd, cd) in [(-1,0),(1,0),(0,-1),(0,1)] {
                         let row_target = row + rd;
                         let col_target = col + cd; 
                         if Self::is_valid_position(row_target,col_target) 
                             && self[(row_target,col_target)].is_unit() 
                         {
-                            // println!("target unit at {} {}",row_target,col_target);
-                            let (source, target) = self.get_cells_mut((row,col), (row_target,col_target)).unwrap();
-                            let (ps,us) = source.unit_mut().unwrap();
-                            let (pt,ut) = target.unit_mut().unwrap();
-                            if ps != pt {
+                            let (source, target) = self.get_2_cells_mut((row,col), (row_target,col_target)).unwrap();
+                            let (player_source,unit_source) = source.unit_mut().unwrap();
+                            let (player_target,unit_target) = target.unit_mut().unwrap();
+                            if player_source != player_target {
                                 // opponents
-                                us.apply_damage(ut);
+                                unit_source.apply_damage(unit_target);
                             } else {
                                 // friends
-                                us.apply_repair(ut);
+                                unit_source.apply_repair(unit_target);
                             }
                         }
                     }
