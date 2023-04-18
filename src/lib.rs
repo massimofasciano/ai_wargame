@@ -20,6 +20,18 @@ impl Default for Game {
 }
 
 impl Game {
+    pub fn new() -> Self {
+        let mut game = Self::default();
+        // let init = [Repair,AI,Hacker,Hacker,AI,Repair,Soldier,Tank,Drone,Drone,Tank,Soldier];
+        // let init_iter = init.iter();
+        // for i in 1..7 {
+        //     game[(0,i)]=Cell::Unit{player:Cell::Player,unit: init_iter.next().unwrap();
+        // }
+        // for i  in 1..7 {
+        //     game[(1,i)]=init_iter.next().unwrap();
+        // }
+        game
+    }
     pub fn get_cell(&self, row: i8, col: i8) -> Option<&Cell> {
         if Self::is_valid_position(row,col) {
             Some(&self.board[row as usize*BOARD_DIM as usize+col as usize])
