@@ -50,16 +50,16 @@ impl Game {
     fn to_index((row, col): (i8, i8)) -> usize {
         row as usize*BOARD_DIM as usize+col as usize
     }
-    pub fn get_2_cells_mut(&mut self, cell0: Coord, cell1: Coord) -> Option<(&mut Cell, &mut Cell)> {
-        if Self::is_valid_position(cell0) &&
-            Self::is_valid_position(cell1) &&
-            cell0 != cell1
+    pub fn get_2_cells_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<(&mut Cell, &mut Cell)> {
+        if Self::is_valid_position(coord0) &&
+            Self::is_valid_position(coord1) &&
+            coord0 != coord1
         {
             let ref_mut_0;
             let ref_mut_1;
             unsafe {
-                ref_mut_0 = &mut *(self.board.get_unchecked_mut(Self::to_index(cell0)) as *mut _);
-                ref_mut_1 = &mut *(self.board.get_unchecked_mut(Self::to_index(cell1)) as *mut _);
+                ref_mut_0 = &mut *(self.board.get_unchecked_mut(Self::to_index(coord0)) as *mut _);
+                ref_mut_1 = &mut *(self.board.get_unchecked_mut(Self::to_index(coord1)) as *mut _);
             }
             Some((ref_mut_0, ref_mut_1))
         } else {
@@ -98,11 +98,11 @@ impl Game {
             && Self::neighbors(from, to) &&
             self.player() == self[from].player().unwrap()
     }
-    pub fn neighbors(cell0 : Coord, cell1 : Coord) -> bool {
-        Self::is_valid_position(cell0) &&
-        Self::is_valid_position(cell1) && (
-            ((cell1.0 - cell0.0).abs() == 1 && (cell1.1 == cell0.1)) ||
-            ((cell1.1 - cell0.1).abs() == 1 && (cell1.0 == cell0.0))
+    pub fn neighbors(coord0 : Coord, coord1 : Coord) -> bool {
+        Self::is_valid_position(coord0) &&
+        Self::is_valid_position(coord1) && (
+            ((coord1.0 - coord0.0).abs() == 1 && (coord1.1 == coord0.1)) ||
+            ((coord1.1 - coord0.1).abs() == 1 && (coord1.0 == coord0.0))
         )
     }
     pub fn move_unit(&mut self, from: Coord, to: Coord) -> bool {
