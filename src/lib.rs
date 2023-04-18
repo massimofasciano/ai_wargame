@@ -1,14 +1,17 @@
-const BOARD_DIM: i8 = 10;
+const BOARD_DIM: Dim = 10;
 const BOARD_SIZE: usize = BOARD_DIM as usize*BOARD_DIM as usize;
 static mut TEMP_CELL : Cell = Cell::new();
 
 type Board = [Cell;BOARD_SIZE];
-type Coord = (i8,i8);
+type Dim = i8;
+type Coord = (Dim,Dim);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Game {
     player: Player,
     board: Board,
+    dim: Dim,
+    total_moves: usize,
 }
 
 impl Default for Game {
@@ -16,6 +19,8 @@ impl Default for Game {
         Self {
             player: Default::default(),
             board: [Default::default();BOARD_SIZE],
+            dim : BOARD_DIM,
+            total_moves : 0,
         }
     }
 }
@@ -43,6 +48,9 @@ impl Game {
             game[(md-row,col)] = Cell::Unit{player: Player::Red,unit: unit.clone()};
         }
         game
+    }
+    pub fn dim(&self) -> Dim {
+        self.dim
     }
     pub fn get_cell(&self, coord : (i8, i8)) -> Option<&Cell> {
         if Self::is_valid_position(coord) {
@@ -80,11 +88,15 @@ impl Game {
     pub fn player(&self) -> Player {
         self.player
     }
+    pub fn total_moves(&self) -> usize {
+        self.total_moves
+    }
     pub fn next_player(&mut self) -> Player {
         self.player = match self.player {
             Player::Blue => Player::Red,
             Player::Red => Player::Blue,
         };
+        self.total_moves += 1;
         self.player
     }
     pub fn is_valid_position((row,col) : (i8, i8)) -> bool {
@@ -160,7 +172,7 @@ impl Game {
             }
         }
     }
-    pub fn winner(&self) -> Option<Player>{
+    pub fn winner(&self) -> Option<Option<Player>>{
         let mut ai_red = false;
         let mut ai_blue = false;
         for c in self.board.iter() {
@@ -175,9 +187,11 @@ impl Game {
             if ai_blue && ai_red { break; }
         }
         if ai_blue && !ai_red {
-            Some(Player::Blue)
+            Some(Some(Player::Blue))
         } else if ai_red && !ai_blue {
-            Some(Player::Red)
+            Some(Some(Player::Red))
+        } else if !ai_red && !ai_blue {
+            Some(None)
         } else {
             None
         }
