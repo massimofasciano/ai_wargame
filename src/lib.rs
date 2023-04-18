@@ -218,15 +218,15 @@ impl Game {
             let unit_type = unit_types[rng.gen_range(0..unit_types.len())];
             let dest = (rng.gen_range(0..self.dim()),rng.gen_range(0..self.dim()));
             let mut new = Cell::new_unit(self.player(), unit_type);
-            println!("random drop of type {} at ({},{})!",unit_type,dest.0,dest.1);
+            println!("random drop of type {} at {}!",unit_type,Self::coord_to_string(dest));
             let target = &mut self[dest];
             if target.is_unit() {
                 new.interact(target);
-                println!("random interaction at ({},{})!",dest.0,dest.1);
+                println!("random interaction at {}!",Self::coord_to_string(dest));
             }
             if target.is_empty() {
                 *target = new;
-                println!("random insertion at ({},{})!",dest.0,dest.1);
+                println!("random insertion at {}!",Self::coord_to_string(dest));
             } 
             return true;
         }
@@ -287,6 +287,9 @@ impl Game {
             }
             println!();
         }
+    }
+    pub fn coord_to_string((row, col) : Coord) -> String {
+        format!("{}{}",(row as u8 +'A' as u8) as char, col)
     }
 }
 
