@@ -1,6 +1,6 @@
 const BOARD_DIM: Dim = 10;
 const BOARD_SIZE: usize = BOARD_DIM as usize*BOARD_DIM as usize;
-static mut TEMP_CELL : Cell = Cell::new();
+// static mut TEMP_CELL : Cell = Cell::new();
 
 type Board = [Cell;BOARD_SIZE];
 type Dim = i8;
@@ -12,6 +12,7 @@ pub struct Game {
     board: Board,
     dim: Dim,
     total_moves: usize,
+    drop_prob: Option<f32>,
 }
 
 impl Default for Game {
@@ -21,12 +22,13 @@ impl Default for Game {
             board: [Default::default();BOARD_SIZE],
             dim : BOARD_DIM,
             total_moves : 0,
+            drop_prob : None,
         }
     }
 }
 
 impl Game {
-    pub fn new() -> Self {
+    pub fn new(drop_prob: Option<f32>) -> Self {
         let md = BOARD_DIM-1;
         let mut game = Self::default();
         let ai = Unit::new(UnitType::AI);
@@ -47,6 +49,7 @@ impl Game {
             game[(row,col)] = Cell::Unit{player: Player::Blue,unit: unit.clone()};
             game[(md-row,col)] = Cell::Unit{player: Player::Red,unit: unit.clone()};
         }
+        game.drop_prob = drop_prob;
         game
     }
     pub fn dim(&self) -> Dim {
@@ -197,12 +200,16 @@ impl Game {
         }
     }
     pub fn random_drop(&mut self) -> bool {
+        if self.drop_prob.is_none() {
+            return false;
+        }
         use rand::Rng;
-        if rand::thread_rng().gen_range(0..100) < 5 {
+        let mut rng = rand::thread_rng();
+        if rng.gen::<f32>() < self.drop_prob.unwrap() {
             use UnitType::*;
             let unit_types = [Hacker,Repair];
-            let unit_type = unit_types[rand::thread_rng().gen_range(0..unit_types.len())];
-            let dest = (rand::thread_rng().gen_range(0..self.dim()),rand::thread_rng().gen_range(0..self.dim()));
+            let unit_type = unit_types[rng.gen_range(0..unit_types.len())];
+            let dest = (rng.gen_range(0..self.dim()),rng.gen_range(0..self.dim()));
             let mut new = Cell::new_unit(self.player(), unit_type);
             println!("random drop of type {} at ({},{})!",unit_type,dest.0,dest.1);
             let target = &mut self[dest];
@@ -284,9 +291,9 @@ impl std::fmt::Display for Cell {
         use Cell::*;
         write!(f, "{}", match self {
             Empty => " . ".to_string(),
-            Blocked => "***".to_string(),
-            Outside => "out".to_string(),
-            Supplies => "sup".to_string(),
+            // Blocked => "***".to_string(),
+            // Outside => "out".to_string(),
+            // Supplies => "sup".to_string(),
             Unit { player, unit } => format!("{}{}",player,unit),
         })
     }
@@ -330,13 +337,15 @@ impl std::fmt::Display for Player {
 impl std::ops::Index<Coord> for Game {
     type Output = Cell;
     fn index(&self, coord: Coord) -> & Self::Output {
-        self.get_cell(coord).unwrap_or(&Cell::Outside)
+        // self.get_cell(coord).unwrap_or(&Cell::Outside)
+        self.get_cell(coord).expect("expected valid coordinates")
     }
 }
 
 impl std::ops::IndexMut<Coord> for Game {
     fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
-        self.get_cell_mut(coord).unwrap_or(unsafe{&mut TEMP_CELL})
+        // self.get_cell_mut(coord).unwrap_or(unsafe{&mut TEMP_CELL})
+        self.get_cell_mut(coord).expect("expected valid coordinates")
     }
 }
 
@@ -352,7 +361,7 @@ pub enum Cell {
     #[default]
     Empty,
     // Blocked,
-    Outside,
+    // Outside,
     // Supplies,
     Unit { player:Player, unit:Unit },
 }

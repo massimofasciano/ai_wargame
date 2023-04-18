@@ -1,9 +1,10 @@
 use ai_wargame::Game;
 
-use rand::Rng;
-
 fn main() {
-    let mut game = Game::new();
+    // let drop_prob = None;
+    let drop_prob = Some(0.05);
+    let mut game = Game::new(drop_prob);
+
     loop {
         println!("{}",game);
 
@@ -17,9 +18,11 @@ fn main() {
         }
 
         loop {
+            use rand::Rng;
+            let mut rng = rand::thread_rng();
             let md = game.dim();
-            let from = (rand::thread_rng().gen_range(0..md),rand::thread_rng().gen_range(0..md));
-            let to = (rand::thread_rng().gen_range(0..md),rand::thread_rng().gen_range(0..md));
+            let from = (rng.gen_range(0..md), rng.gen_range(0..md));
+            let to = (rng.gen_range(0..md), rng.gen_range(0..md));
             if !game.perform_action(from, to) {
                 // println!("Invalid move!");
                 continue;
