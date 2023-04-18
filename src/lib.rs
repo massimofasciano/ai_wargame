@@ -3,6 +3,7 @@ const BOARD_SIZE: usize = BOARD_DIM as usize*BOARD_DIM as usize;
 static mut TEMP_CELL : Cell = Cell::new();
 
 type Board = [Cell;BOARD_SIZE];
+type Coord = (i8,i8);
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Game {
@@ -32,32 +33,33 @@ impl Game {
         // }
         game
     }
-    pub fn get_cell(&self, row: i8, col: i8) -> Option<&Cell> {
-        if Self::is_valid_position(row,col) {
-            Some(&self.board[row as usize*BOARD_DIM as usize+col as usize])
+    pub fn get_cell(&self, coord : (i8, i8)) -> Option<&Cell> {
+        if Self::is_valid_position(coord) {
+            Some(&self.board[Self::to_index(coord)])
         } else {
             None
         }
     }
-    pub fn get_cell_mut(&mut self, row: i8, col: i8) -> Option<&mut Cell> {
-        if Self::is_valid_position(row,col) {
-            Some(&mut self.board[row as usize*BOARD_DIM as usize+col as usize])
+    pub fn get_cell_mut(&mut self, coord : (i8, i8)) -> Option<&mut Cell> {
+        if Self::is_valid_position(coord) {
+            Some(&mut self.board[Self::to_index(coord)])
         } else {
             None
         }
     }
-    pub fn get_2_cells_mut(&mut self, cell0: (i8,i8), cell1: (i8,i8)) -> Option<(&mut Cell, &mut Cell)> {
-        if Self::is_valid_position(cell0.0,cell0.1) &&
-            Self::is_valid_position(cell1.0,cell1.1) &&
+    fn to_index((row, col): (i8, i8)) -> usize {
+        row as usize*BOARD_DIM as usize+col as usize
+    }
+    pub fn get_2_cells_mut(&mut self, cell0: Coord, cell1: Coord) -> Option<(&mut Cell, &mut Cell)> {
+        if Self::is_valid_position(cell0) &&
+            Self::is_valid_position(cell1) &&
             cell0 != cell1
         {
-            let idx0 = cell0.0 as usize*BOARD_DIM as usize+cell0.1 as usize;
-            let idx1 = cell1.0 as usize*BOARD_DIM as usize+cell1.1 as usize;
             let ref_mut_0;
             let ref_mut_1;
             unsafe {
-                ref_mut_0 = &mut *(self.board.get_unchecked_mut(idx0) as *mut _);
-                ref_mut_1 = &mut *(self.board.get_unchecked_mut(idx1) as *mut _);
+                ref_mut_0 = &mut *(self.board.get_unchecked_mut(Self::to_index(cell0)) as *mut _);
+                ref_mut_1 = &mut *(self.board.get_unchecked_mut(Self::to_index(cell1)) as *mut _);
             }
             Some((ref_mut_0, ref_mut_1))
         } else {
@@ -74,10 +76,10 @@ impl Game {
         };
         self.player
     }
-    pub fn is_valid_position(row: i8, col: i8) -> bool {
+    pub fn is_valid_position((row,col) : (i8, i8)) -> bool {
         row >= 0 && col >= 0 && row < BOARD_DIM && col < BOARD_DIM
     }
-    pub fn get_move_from_stdin(&self) -> Option<((i8,i8),(i8,i8))> {
+    pub fn get_move_from_stdin(&self) -> Option<(Coord,Coord)> {
         println!("Player {}, enter next move (1 coord per line, 4 lines)...",self.player());
         let r1 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
         let c1 = std::io::stdin().lines().next().unwrap().unwrap().parse::<i8>();
@@ -89,21 +91,21 @@ impl Game {
             None
         }
     }
-    pub fn is_valid_move(&mut self, from: (i8,i8), to: (i8,i8)) -> bool {
-        Self::is_valid_position(to.0, to.1)
-            && Self::is_valid_position(from.0, from.1)
+    pub fn is_valid_move(&mut self, from: Coord, to: Coord) -> bool {
+        Self::is_valid_position(to)
+            && Self::is_valid_position(from)
             && self[to].is_empty() && self[from].is_unit() 
             && Self::neighbors(from, to) &&
             self.player() == self[from].player().unwrap()
     }
-    pub fn neighbors(cell0 : (i8,i8), cell1 : (i8,i8)) -> bool {
-        Self::is_valid_position(cell0.0,cell0.1) &&
-        Self::is_valid_position(cell1.0,cell1.1) && (
+    pub fn neighbors(cell0 : Coord, cell1 : Coord) -> bool {
+        Self::is_valid_position(cell0) &&
+        Self::is_valid_position(cell1) && (
             ((cell1.0 - cell0.0).abs() == 1 && (cell1.1 == cell0.1)) ||
             ((cell1.1 - cell0.1).abs() == 1 && (cell1.0 == cell0.0))
         )
     }
-    pub fn move_unit(&mut self, from: (i8,i8), to: (i8,i8)) -> bool {
+    pub fn move_unit(&mut self, from: Coord, to: Coord) -> bool {
         if self.is_valid_move(from, to) {
             self[to] = self[from];
             self[from] = Cell::Empty;
@@ -128,7 +130,7 @@ impl Game {
                     for (rd, cd) in [(-1,0),(1,0),(0,-1),(0,1)] {
                         let row_target = row + rd;
                         let col_target = col + cd; 
-                        if Self::is_valid_position(row_target,col_target) 
+                        if Self::is_valid_position((row_target,col_target)) 
                             && self[(row_target,col_target)].is_unit() 
                         {
                             let (source, target) = self.get_2_cells_mut((row,col), (row_target,col_target)).unwrap();
@@ -216,16 +218,16 @@ impl std::fmt::Display for Player {
     }
 }
 
-impl std::ops::Index<(i8,i8)> for Game {
+impl std::ops::Index<Coord> for Game {
     type Output = Cell;
-    fn index(&self, (row,col): (i8,i8)) -> & Self::Output {
-        self.get_cell(row, col).unwrap_or(&Cell::Outside)
+    fn index(&self, coord: Coord) -> & Self::Output {
+        self.get_cell(coord).unwrap_or(&Cell::Outside)
     }
 }
 
-impl std::ops::IndexMut<(i8,i8)> for Game {
-    fn index_mut(&mut self, (row,col): (i8,i8)) -> &mut Self::Output {
-        self.get_cell_mut(row, col).unwrap_or(unsafe{&mut TEMP_CELL})
+impl std::ops::IndexMut<Coord> for Game {
+    fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
+        self.get_cell_mut(coord).unwrap_or(unsafe{&mut TEMP_CELL})
     }
 }
 
