@@ -1,10 +1,6 @@
 pub mod game;
+pub mod board;
 pub use game::Game;
-pub mod board_array;
-// pub use board_array::Board;
-pub mod board_vec;
-pub use board_vec::Board;
-pub mod board_flat;
 pub mod cell;
 pub use cell::Cell;
 pub mod unit;
@@ -13,6 +9,9 @@ pub mod unit_type;
 pub use unit_type::UnitType;
 pub mod player;
 pub use player::Player;
+
+// pub use board::array::Board;
+pub use board::vec::Board;
 
 type Dim = i8;
 type Coord = (Dim,Dim);

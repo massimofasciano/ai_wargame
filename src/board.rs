@@ -1,15 +1,36 @@
-use crate::{Coord, Cell, DEFAULT_BOARD_DIM};
+use crate::{Coord, Cell, Dim, DEFAULT_BOARD_DIM};
 
 use duplicate::duplicate_item;
 
-#[duplicate_item(I T; [const SIZE: usize] [crate::board_array::BoardArray<SIZE>]; [] [crate::board_vec::Board])]
+pub mod array;
+pub mod vec;
+
+#[duplicate_item(I T D; [const SIZE: usize] [array::BoardArray<SIZE>] [array::BoardData<SIZE>]; [] [vec::Board] [vec::BoardData])]
+impl<I> T {
+    pub const fn len(&self) -> usize {
+        let dim = self.dim as usize;
+        dim * dim
+    }
+    pub const fn dim(&self) -> Dim {
+        self.dim
+    }
+    pub const fn inner(&self) -> &D {
+        &self.data
+    }
+    pub fn inner_mut(&mut self) -> &mut D {
+        &mut self.data
+    }
+}
+
+
+#[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> Default for T {
     fn default() -> Self {
         Self::new(DEFAULT_BOARD_DIM)
     }
 }
 
-#[duplicate_item(I T; [const SIZE: usize] [crate::board_array::BoardArray<SIZE>]; [] [crate::board_vec::Board])]
+#[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> std::fmt::Display for T {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let data = self.inner();
@@ -20,7 +41,7 @@ impl<I> std::fmt::Display for T {
     }
 }
 
-#[duplicate_item(I T; [const SIZE: usize] [crate::board_array::BoardArray<SIZE>]; [] [crate::board_vec::Board])]
+#[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> std::ops::Index<Coord> for T {
     type Output = Cell;
     fn index(&self, coord: Coord) -> & Self::Output {
@@ -30,7 +51,7 @@ impl<I> std::ops::Index<Coord> for T {
     }
 }
 
-#[duplicate_item(I T; [const SIZE: usize] [crate::board_array::BoardArray<SIZE>]; [] [crate::board_vec::Board])]
+#[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> std::ops::IndexMut<Coord> for T {
     fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
         let index = self.to_index(coord);
@@ -39,7 +60,7 @@ impl<I> std::ops::IndexMut<Coord> for T {
     }
 }
 
-#[duplicate_item(I T; [const SIZE: usize] [crate::board_array::BoardArray<SIZE>]; [] [crate::board_vec::Board])]
+#[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> T {
     const fn to_index(&self, (row, col): Coord) -> usize {
         let dim = self.dim() as usize;
