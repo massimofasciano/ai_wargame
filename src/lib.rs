@@ -11,6 +11,7 @@ pub use player::Player;
 
 const BOARD_DIM: Dim = 10;
 const BOARD_SIZE: usize = BOARD_DIM as usize*BOARD_DIM as usize;
+const MAX_HEALTH : u8 = 9;
 
 type Board = [Cell;BOARD_SIZE];
 type Dim = i8;

@@ -1,4 +1,4 @@
-use crate::{UnitType, Health};
+use crate::{UnitType, Health, MAX_HEALTH};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Unit {
@@ -14,18 +14,22 @@ impl Default for Unit {
 
 impl Unit {
     pub fn new(unit_type : UnitType) -> Self {
-        Self { unit_type, health: unit_type.initial_health() }
+        let health = unit_type.initial_health();
+        assert!(health <= MAX_HEALTH);
+        Self { unit_type, health }
     }
     pub fn apply_repair(&mut self, target: &mut Self) -> u8 {
+        assert!(target.health <= MAX_HEALTH);
         let repair = self.unit_type.repair_amount(&target.unit_type);
-        if repair + target.health < 9 {
+        if repair + target.health < MAX_HEALTH {
             target.health += repair;
         } else {
-            target.health = 9;
+            target.health = MAX_HEALTH;
         }
         repair
     }
     pub fn apply_damage(&mut self, target: &mut Self) -> u8 {
+        assert!(target.health <= MAX_HEALTH);
         let damage = self.unit_type.damage_amount(&target.unit_type);
         if damage < target.health {
             target.health -= damage;
