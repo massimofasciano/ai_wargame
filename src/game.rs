@@ -25,17 +25,22 @@ impl Game {
         let tank = Unit::new(UnitType::Tank);
         let soldier = Unit::new(UnitType::Soldier);
         let drone = Unit::new(UnitType::Drone);
+        assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
         let init = vec![
+            (0,1,&repair), (0,md-1,&hacker),
+            (1,1,&soldier), (1,md-1,&drone),
+            (0,3,&hacker), (0,md-3,&repair),
+            (1,3,&drone), (1,md-3,&soldier),
             (0,2,&ai), (0,md-2,&ai),
             (1,2,&tank), (1,md-2,&tank),
-            (0,1,&repair), (0,md-1,&repair),
-            (0,3,&hacker), (0,md-3,&hacker),
-            (1,1,&soldier), (1,md-1,&soldier),
-            (1,3,&drone), (1,md-3,&drone),
         ];
+        assert_eq!(Player::cardinality(),2);
+        let mut p_all = Player::all();
+        let p1 = p_all.next().unwrap();
+        let p2 = p_all.next().unwrap();
         for (row,col,unit) in init {
-            game[(row,col)] = Cell::Unit{player: Player::Blue,unit: unit.clone()};
-            game[(md-row,col)] = Cell::Unit{player: Player::Red,unit: unit.clone()};
+            game[(row,col)] = Cell::Unit{player: p2, unit: unit.clone()};
+            game[(md-row,col)] = Cell::Unit{player: p1, unit: unit.clone()};
         }
         game.drop_prob = drop_prob;
         game
@@ -43,21 +48,21 @@ impl Game {
     pub fn dim(&self) -> Dim {
         self.dim
     }
-    pub fn get_cell(&self, coord: (i8, i8)) -> Option<&Cell> {
+    pub fn get_cell(&self, coord: Coord) -> Option<&Cell> {
         if self.is_valid_position(coord) {
             Some(&self.board.get(coord).unwrap())
         } else {
             None
         }
     }
-    pub fn get_cell_mut(&mut self, coord: (i8, i8)) -> Option<&mut Cell> {
+    pub fn get_cell_mut(&mut self, coord: Coord) -> Option<&mut Cell> {
         if self.is_valid_position(coord) {
             self.board.get_mut(coord)
         } else {
             None
         }
     }
-    pub fn set_cell(&mut self, coord: (i8, i8), value: Cell) {
+    pub fn set_cell(&mut self, coord: Coord, value: Cell) {
         if self.is_valid_position(coord) {
             self.board[coord] = value;
         }
@@ -83,8 +88,11 @@ impl Game {
         self.total_moves += 1;
         self.player
     }
-    pub fn is_valid_position(&self, (row,col) : (i8, i8)) -> bool {
-        row >= 0 && col >= 0 && row < self.dim && col < self.dim
+    pub fn is_valid_position(&self, coord : Coord) -> bool {
+        let (row,col) = coord;
+        let is_valid = row >= 0 && col >= 0 && row < self.dim && col < self.dim;
+        debug_assert_eq!(is_valid,true,"({},{}) is not valid for a {}x{} board",row,col,self.dim,self.dim);
+        is_valid
     }
     pub fn is_valid_move(&mut self, from: Coord, to: Coord) -> bool {
         self.neighbors(from, to) &&

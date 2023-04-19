@@ -1,6 +1,6 @@
 use crate::{Coord, Cell, Dim};
 
-// for 10*10 maximum
+// for 10x10 maximum dimensions
 pub type Board = BoardArray<100>;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
