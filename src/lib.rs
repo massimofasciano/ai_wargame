@@ -4,6 +4,7 @@ pub mod board_array;
 // pub use board_array::Board;
 pub mod board_vec;
 pub use board_vec::Board;
+pub mod board_flat;
 pub mod cell;
 pub use cell::Cell;
 pub mod unit;

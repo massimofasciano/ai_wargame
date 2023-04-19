@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 derive_more = "0.99.17"
+duplicate = "1.0.0"
 enum-iterator = "1.4.0"
 rand = "0.8.5"
 regex = "1.7.3"
