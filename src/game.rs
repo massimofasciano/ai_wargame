@@ -126,11 +126,11 @@ impl Game {
             false
         }
     }
-    pub fn remove_dead(&mut self) {
-        for cell in self.board.iter_mut() {
-            cell.remove_dead();
-        }
-    }
+    // pub fn remove_dead(&mut self) {
+    //     for cell in self.board.iter_mut() {
+    //         cell.remove_dead();
+    //     }
+    // }
     // pub fn resolve_conflicts(&mut self) {
     //     for row in 0..BOARD_DIM {
     //         for col in 0..BOARD_DIM {
@@ -219,20 +219,46 @@ impl Game {
             let dest = (rng.gen_range(0..self.dim()),rng.gen_range(0..self.dim()));
             let mut new = Cell::new_unit(self.player(), unit_type);
             println!("random drop of type {} at {}!",unit_type,Self::coord_to_string(dest));
-            let target = &mut self[dest];
+            // let target = &mut self[dest];
+            let target = self.get_cell_mut(dest).unwrap();
             if target.is_unit() {
-                new.interact(target);
+                let (player_source,unit_source) = new.unit_mut().unwrap();
+                let (player_target,unit_target) = target.unit_mut().unwrap();
+                if player_source != player_target {
+                    // it's an opposing unit so we try to damage it (it will damage us back)
+                    unit_source.apply_damage(unit_target);
+                    unit_target.apply_damage(unit_source);
+                    if new.is_dead() {
+                        new = Cell::default();
+                    } 
+                    // self.remove_dead(dest);
+                } else {
+                    // it's our unit so we try to repair it
+                    unit_source.apply_repair(unit_target);
+                }
+                // new.interact(target);
                 println!("random interaction at {}!",Self::coord_to_string(dest));
             }
-            if target.is_empty() {
-                *target = new;
+            if target.is_empty() || target.is_dead() {
+                self.set_cell(dest, new);
+                // *target = new;
                 println!("random insertion at {}!",Self::coord_to_string(dest));
             } 
             return true;
         }
         false
     }
+    pub fn remove_dead(&mut self, coord: Coord) {
+        if let Some(cell) = self.get_cell_mut(coord) {
+            if let Some((_, unit)) = cell.unit() {
+                if unit.health == 0 {
+                    *cell = Cell::default();
+                }
+            }
+        }
+    }
     pub fn perform_action(&mut self, from: Coord, to: Coord) -> bool {
+        // we return a bool indicating if the move was valid
         let valid = if self.in_range(1, from, to) && 
             self[from].is_unit() && 
             self.player() == self[from].player().unwrap() 
@@ -253,13 +279,15 @@ impl Game {
                     // it's an opposing unit so we try to damage it (it will damage us back)
                     unit_source.apply_damage(unit_target);
                     unit_target.apply_damage(unit_source);
-                    source.remove_dead();
-                    target.remove_dead();
+                    // source.remove_dead();
+                    // target.remove_dead();
+                    self.remove_dead(from);
+                    self.remove_dead(to);
+                    true
                 } else {
-                    // it's our unit so we try to repair it
-                    unit_source.apply_repair(unit_target);
+                    // it's our unit so we try to repair it (if repair not possible then action is not valid)
+                    unit_source.apply_repair(unit_target) > 0
                 }
-                true
             } else {
                 false
             }

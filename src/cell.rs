@@ -44,27 +44,34 @@ impl Cell {
             _ => None,
         }
     }
-    pub fn remove_dead(&mut self) {
+    pub fn is_dead(&self) -> bool {
         if let Some((_, unit)) = self.unit() {
-            if unit.health == 0 {
-                *self = Self::default();
-            }
-        }
-    }
-    pub fn interact(&mut self, target: &mut Self) {
-        let (player_source,unit_source) = self.unit_mut().unwrap();
-        let (player_target,unit_target) = target.unit_mut().unwrap();
-        if player_source != player_target {
-            // it's an opposing unit so we try to damage it (it will damage us back)
-            unit_source.apply_damage(unit_target);
-            unit_target.apply_damage(unit_source);
-            self.remove_dead();
-            target.remove_dead();
+            unit.health == 0
         } else {
-            // it's our unit so we try to repair it
-            unit_source.apply_repair(unit_target);
+            false
         }
     }
+    // pub fn remove_dead(&mut self) {
+    //     if let Some((_, unit)) = self.unit() {
+    //         if unit.health == 0 {
+    //             *self = Self::default();
+    //         }
+    //     }
+    // }
+    // pub fn interact(&mut self, target: &mut Self) {
+    //     let (player_source,unit_source) = self.unit_mut().unwrap();
+    //     let (player_target,unit_target) = target.unit_mut().unwrap();
+    //     if player_source != player_target {
+    //         // it's an opposing unit so we try to damage it (it will damage us back)
+    //         unit_source.apply_damage(unit_target);
+    //         unit_target.apply_damage(unit_source);
+    //         self.remove_dead();
+    //         target.remove_dead();
+    //     } else {
+    //         // it's our unit so we try to repair it
+    //         unit_source.apply_repair(unit_target);
+    //     }
+    // }
     pub fn to_pretty_compact_string(&self) -> String {
         if self.is_empty() {
             String::from(" . ")
