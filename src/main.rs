@@ -11,7 +11,7 @@ fn main() {
         game.pretty_print();
         println!();
 
-        if let Some(winner) = game.winner() {
+        if let Some(winner) = game.check_if_winner() {
             println!("{} in {} moves!", if winner.is_none() {
                 "draw".to_string()
             } else {

@@ -77,10 +77,7 @@ impl Game {
         self.total_moves
     }
     pub fn next_player(&mut self) -> Player {
-        self.player = match self.player {
-            Player::Blue => Player::Red,
-            Player::Red => Player::Blue,
-        };
+        self.player = self.player.next();
         self.total_moves += 1;
         self.player
     }
@@ -145,30 +142,57 @@ impl Game {
     //         }
     //     }
     // }
-    pub fn winner(&self) -> Option<Option<Player>>{
-        let mut ai_red = false;
-        let mut ai_blue = false;
+    pub fn check_if_winner(&self) -> Option<Option<Player>>{
+        assert_eq!(Player::cardinality(),2);
+        let p1 = Player::all().next().unwrap();
+        let p2 = Player::all().next().unwrap();
+        let mut ai_p1 = false;
+        let mut ai_p2 = false;
         for c in self.board.iter() {
             if let Some((player,unit)) = c.unit() {
-                if player == &Player::Red && unit.unit_type == UnitType::AI {
-                    ai_red = true;
+                if player == &p1 && unit.unit_type == UnitType::AI {
+                    ai_p1 = true;
                 }
-                if player == &Player::Blue && unit.unit_type == UnitType::AI {
-                    ai_blue = true;
+                if player == &p2 && unit.unit_type == UnitType::AI {
+                    ai_p2 = true;
                 }
             }
-            if ai_blue && ai_red { break; }
+            if ai_p1 && ai_p2 { break }
         }
-        if ai_blue && !ai_red {
-            Some(Some(Player::Blue))
-        } else if ai_red && !ai_blue {
-            Some(Some(Player::Red))
-        } else if !ai_red && !ai_blue {
+        if ai_p1 && !ai_p2 {
+            Some(Some(p1))
+        } else if ai_p2 && !ai_p1 {
+            Some(Some(p2))
+        } else if !ai_p2 && !ai_p1 {
             Some(None)
         } else {
             None
         }
     }
+    // pub fn winner(&self) -> Option<Option<Player>>{
+    //     let mut ai_red = false;
+    //     let mut ai_blue = false;
+    //     for c in self.board.iter() {
+    //         if let Some((player,unit)) = c.unit() {
+    //             if player == &Player::Red && unit.unit_type == UnitType::AI {
+    //                 ai_red = true;
+    //             }
+    //             if player == &Player::Blue && unit.unit_type == UnitType::AI {
+    //                 ai_blue = true;
+    //             }
+    //         }
+    //         if ai_blue && ai_red { break; }
+    //     }
+    //     if ai_blue && !ai_red {
+    //         Some(Some(Player::Blue))
+    //     } else if ai_red && !ai_blue {
+    //         Some(Some(Player::Red))
+    //     } else if !ai_red && !ai_blue {
+    //         Some(None)
+    //     } else {
+    //         None
+    //     }
+    // }
     pub fn parse_move_stdin(&self) -> Option<(Coord,Coord)> {
         use std::io::Write;
         print!("{} player, enter your next move [ex: a6 d9] : ",self.player());
