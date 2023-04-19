@@ -1,9 +1,10 @@
 use ai_wargame::Game;
 
 fn main() {
+    let dim = 10;
     // let drop_prob = None;
     let drop_prob = Some(0.05);
-    let mut game = Game::new(drop_prob);
+    let mut game = Game::new(dim, drop_prob);
     let play_random = std::env::args().len() > 1;
 
     loop {

@@ -1,4 +1,4 @@
-use crate::{BOARD_DIM, Coord, BOARD_SIZE, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter};
+use crate::{Coord, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Game {
@@ -10,9 +10,15 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(drop_prob: Option<f32>) -> Self {
-        let md = BOARD_DIM-1;
-        let mut game = Self::default();
+    pub fn new(dim: Dim, drop_prob: Option<f32>) -> Self {
+        let mut game = Self {
+            player: Player::default(),
+            board: Board::new(dim),
+            dim,
+            total_moves : 0,
+            drop_prob,
+        };
+        let md = dim-1;
         let ai = Unit::new(UnitType::AI);
         let hacker = Unit::new(UnitType::Hacker);
         let repair = Unit::new(UnitType::Repair);
@@ -38,48 +44,30 @@ impl Game {
         self.dim
     }
     pub fn get_cell(&self, coord: (i8, i8)) -> Option<&Cell> {
-        if Self::is_valid_position(coord) {
-            Some(&self.board[Self::to_index(coord)])
+        if self.is_valid_position(coord) {
+            Some(&self.board.get(coord).unwrap())
         } else {
             None
         }
     }
     pub fn get_cell_mut(&mut self, coord: (i8, i8)) -> Option<&mut Cell> {
-        if Self::is_valid_position(coord) {
-            Some(&mut self.board[Self::to_index(coord)])
+        if self.is_valid_position(coord) {
+            self.board.get_mut(coord)
         } else {
             None
         }
     }
     pub fn set_cell(&mut self, coord: (i8, i8), value: Cell) {
-        if Self::is_valid_position(coord) {
-            self.board[Self::to_index(coord)] = value;
+        if self.is_valid_position(coord) {
+            self.board[coord] = value;
         }
     }
-    pub fn replace_cell(&mut self, coord: (i8, i8), value: Cell) -> Option<Cell> {
-        if Self::is_valid_position(coord) {
-            let old = std::mem::take(&mut self.board[Self::to_index(coord)]);
-            self.board[Self::to_index(coord)] = value;
-            Some(old)
-        } else {
-            None
-        }
-    }
-    fn to_index((row, col): (i8, i8)) -> usize {
-        row as usize*BOARD_DIM as usize+col as usize
-    }
-    pub fn get_2_cells_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<(&mut Cell, &mut Cell)> {
-        if Self::is_valid_position(coord0) &&
-            Self::is_valid_position(coord1) &&
+    pub fn get_two_cells_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut Cell;2]> {
+        if self.is_valid_position(coord0) &&
+            self.is_valid_position(coord1) &&
             coord0 != coord1
         {
-            let ref_mut_0;
-            let ref_mut_1;
-            unsafe {
-                ref_mut_0 = &mut *(self.board.get_unchecked_mut(Self::to_index(coord0)) as *mut _);
-                ref_mut_1 = &mut *(self.board.get_unchecked_mut(Self::to_index(coord1)) as *mut _);
-            }
-            Some((ref_mut_0, ref_mut_1))
+            self.board.get_two_mut(coord0, coord1)
         } else {
             None
         }
@@ -95,23 +83,23 @@ impl Game {
         self.total_moves += 1;
         self.player
     }
-    pub fn is_valid_position((row,col) : (i8, i8)) -> bool {
-        row >= 0 && col >= 0 && row < BOARD_DIM && col < BOARD_DIM
+    pub fn is_valid_position(&self, (row,col) : (i8, i8)) -> bool {
+        row >= 0 && col >= 0 && row < self.dim && col < self.dim
     }
     pub fn is_valid_move(&mut self, from: Coord, to: Coord) -> bool {
-        Self::neighbors(from, to) &&
+        self.neighbors(from, to) &&
         self[to].is_empty() && self[from].is_unit() &&
         self.player() == self[from].player().unwrap()
     }
-    pub fn neighbors(coord0 : Coord, coord1 : Coord) -> bool {
+    pub fn neighbors(&self, coord0 : Coord, coord1 : Coord) -> bool {
         coord0 != coord1 &&
-        Self::is_valid_position(coord0) && Self::is_valid_position(coord1) && 
+        self.is_valid_position(coord0) && self.is_valid_position(coord1) && 
         (coord1.0 - coord0.0).abs() <= 1 && (coord1.1 - coord0.1).abs() <= 1
     }
-    pub fn in_range(range: u8, coord0 : Coord, coord1 : Coord) -> bool {
+    pub fn in_range(&self, range: u8, coord0 : Coord, coord1 : Coord) -> bool {
         coord0 == coord1 || // we consider our own position as in range
-        Self::is_valid_position(coord0) && 
-        Self::is_valid_position(coord1) && 
+        self.is_valid_position(coord0) && 
+        self.is_valid_position(coord1) && 
         (coord1.0 - coord0.0).abs() as u8 <= range && 
         (coord1.1 - coord0.1).abs() as u8 <= range
     }
@@ -137,7 +125,7 @@ impl Game {
     //                 for rd in -1..=1 {
     //                     for cd in -1..=1 {
     //                         let coord_target = (row + rd, col + cd);
-    //                         if Self::is_valid_position(coord_target) && self[coord_target].is_unit() && coord_target != coord_source
+    //                         if self.is_valid_position(coord_target) && self[coord_target].is_unit() && coord_target != coord_source
     //                         {
     //                             let (source, target) = self.get_2_cells_mut(coord_source, coord_target).unwrap();
     //                             let (player_source,unit_source) = source.unit_mut().unwrap();
@@ -231,7 +219,7 @@ impl Game {
         false
     }
     pub fn perform_action(&mut self, from: Coord, to: Coord) -> bool {
-        let valid = if Self::in_range(1, from, to) && 
+        let valid = if self.in_range(1, from, to) && 
             self[from].is_unit() && 
             self.player() == self[from].player().unwrap() 
         {
@@ -244,7 +232,7 @@ impl Game {
                 self.move_unit(from, to)
             } else if self[to].is_unit() {
                 // destination is a unit
-                let (source, target) = self.get_2_cells_mut(from, to).unwrap();
+                let [source, target] = self.get_two_cells_mut(from, to).unwrap();
                 let (player_source,unit_source) = source.unit_mut().unwrap();
                 let (player_target,unit_target) = target.unit_mut().unwrap();
                 if player_source != player_target {
@@ -273,13 +261,13 @@ impl Game {
     pub fn pretty_print(&self) {
         println!("Next player: {}",self.player());
         print!("    ");
-        for col in 0..BOARD_DIM {
+        for col in 0..self.dim {
             print!(" {:>2} ",col);
         }
         println!();
-        for row in 0..BOARD_DIM {
+        for row in 0..self.dim {
             print!("{:>2}: ",(row as u8 +'A' as u8) as char);
-            for col in 0..BOARD_DIM {
+            for col in 0..self.dim {
                 let cell = self[(row,col)];
                 print!(" {}",cell.to_pretty_compact_string());
             }
@@ -293,13 +281,7 @@ impl Game {
 
 impl Default for Game {
     fn default() -> Self {
-        Self {
-            player: Default::default(),
-            board: [Default::default();BOARD_SIZE],
-            dim : BOARD_DIM,
-            total_moves : 0,
-            drop_prob : None,
-        }
+        Self::new(10, None)
     }
 }
 
