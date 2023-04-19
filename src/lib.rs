@@ -1,5 +1,7 @@
 pub mod game;
 pub use game::Game;
+pub mod board;
+//pub use board::Board;
 pub mod cell;
 pub use cell::Cell;
 pub mod unit;
