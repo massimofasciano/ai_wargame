@@ -22,7 +22,6 @@ impl<I> T {
     }
 }
 
-
 #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> Default for T {
     fn default() -> Self {
