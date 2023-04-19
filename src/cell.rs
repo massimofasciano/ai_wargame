@@ -47,7 +47,7 @@ impl Cell {
     pub fn remove_dead(&mut self) {
         if let Some((_, unit)) = self.unit() {
             if unit.health == 0 {
-                *self = Cell::Empty;
+                *self = Self::default();
             }
         }
     }

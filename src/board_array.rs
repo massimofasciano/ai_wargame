@@ -30,7 +30,14 @@ impl<const SIZE: usize> BoardArray<SIZE> {
         assert!(dim as usize*dim as usize <= SIZE,"{}x{} board will not fit in array of size {}",dim,dim,SIZE);
         Self {
             dim,
-            data : [Cell::default();SIZE],
+            data : [Default::default();SIZE],
+        }
+    }
+    pub fn remove(&mut self, coord: Coord) -> Option<Cell> {
+        if let Some(cell) = self.get_mut(coord) {
+            Some(std::mem::take(cell))
+        } else {
+            None
         }
     }
     pub fn get(&self, coord: Coord) -> Option<&Cell> {

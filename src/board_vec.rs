@@ -28,9 +28,16 @@ impl Board {
         let cap = dimu * dimu;
         let mut data = Vec::with_capacity(cap);
         for _ in 0..cap {
-            data.push(Cell::default());
+            data.push(Default::default());
         }
         Self { dim, data }
+    }
+    pub fn remove(&mut self, coord: Coord) -> Option<Cell> {
+        if let Some(cell) = self.get_mut(coord) {
+            Some(std::mem::take(cell))
+        } else {
+            None
+        }
     }
     pub fn get(&self, coord: Coord) -> Option<&Cell> {
         let index = self.to_index(coord);

@@ -48,6 +48,13 @@ impl Game {
     pub fn dim(&self) -> Dim {
         self.dim
     }
+    pub fn remove_cell(&mut self, coord: Coord) -> Option<Cell> {
+        if self.is_valid_position(coord) {
+            self.board.remove(coord)
+        } else {
+            None
+        }
+    }
     pub fn get_cell(&self, coord: Coord) -> Option<&Cell> {
         if self.is_valid_position(coord) {
             Some(&self.board.get(coord).unwrap())
@@ -113,8 +120,7 @@ impl Game {
     }
     pub fn move_unit(&mut self, from: Coord, to: Coord) -> bool {
         if self.is_valid_move(from, to) {
-            self[to] = self[from];
-            self[from] = Cell::default();
+            self[to] = self.remove_cell(from).unwrap();
             true
         } else {
             false
