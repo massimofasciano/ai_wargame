@@ -37,16 +37,30 @@ impl Game {
     pub fn dim(&self) -> Dim {
         self.dim
     }
-    pub fn get_cell(&self, coord : (i8, i8)) -> Option<&Cell> {
+    pub fn get_cell(&self, coord: (i8, i8)) -> Option<&Cell> {
         if Self::is_valid_position(coord) {
             Some(&self.board[Self::to_index(coord)])
         } else {
             None
         }
     }
-    pub fn get_cell_mut(&mut self, coord : (i8, i8)) -> Option<&mut Cell> {
+    pub fn get_cell_mut(&mut self, coord: (i8, i8)) -> Option<&mut Cell> {
         if Self::is_valid_position(coord) {
             Some(&mut self.board[Self::to_index(coord)])
+        } else {
+            None
+        }
+    }
+    pub fn set_cell(&mut self, coord: (i8, i8), value: Cell) {
+        if Self::is_valid_position(coord) {
+            self.board[Self::to_index(coord)] = value;
+        }
+    }
+    pub fn replace_cell(&mut self, coord: (i8, i8), value: Cell) -> Option<Cell> {
+        if Self::is_valid_position(coord) {
+            let old = std::mem::take(&mut self.board[Self::to_index(coord)]);
+            self.board[Self::to_index(coord)] = value;
+            Some(old)
         } else {
             None
         }
@@ -104,7 +118,7 @@ impl Game {
     pub fn move_unit(&mut self, from: Coord, to: Coord) -> bool {
         if self.is_valid_move(from, to) {
             self[to] = self[from];
-            self[from] = Cell::Empty;
+            self[from] = Cell::default();
             true
         } else {
             false
@@ -302,14 +316,12 @@ impl std::fmt::Display for Game {
 impl std::ops::Index<Coord> for Game {
     type Output = Cell;
     fn index(&self, coord: Coord) -> & Self::Output {
-        // self.get_cell(coord).unwrap_or(&Cell::Outside)
         self.get_cell(coord).expect("expected valid coordinates")
     }
 }
 
 impl std::ops::IndexMut<Coord> for Game {
     fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
-        // self.get_cell_mut(coord).unwrap_or(unsafe{&mut TEMP_CELL})
         self.get_cell_mut(coord).expect("expected valid coordinates")
     }
 }
