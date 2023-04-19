@@ -13,11 +13,18 @@ impl<const SIZE: usize> BoardArray<SIZE> {
     pub const fn size(&self) -> usize {
         SIZE
     }
+    pub const fn len(&self) -> usize {
+        let dim = self.dim as usize;
+        dim * dim
+    }
     pub const fn dim(&self) -> Dim {
         self.dim
     }
     const fn to_index(&self, (row, col): Coord) -> usize {
-        row as usize*self.dim as usize+col as usize
+        let dim = self.dim as usize;
+        let row = row as usize;
+        let col = col as usize;
+        row * dim + col
     }
     pub fn new(dim: Dim) -> Self {
         assert!(dim as usize*dim as usize <= SIZE,"{}x{} board will not fit in array of size {}",dim,dim,SIZE);
