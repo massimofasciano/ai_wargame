@@ -16,11 +16,11 @@ impl Board {
     pub const fn dim(&self) -> Dim {
         self.dim
     }
-    const fn to_index(&self, (row, col): Coord) -> usize {
-        let dim = self.dim as usize;
-        let row = row as usize;
-        let col = col as usize;
-        row * dim + col
+    pub const fn inner(&self) -> &Vec<Cell> {
+        &self.data
+    }
+    pub fn inner_mut(&mut self) -> &mut Vec<Cell> {
+        &mut self.data
     }
     pub fn new(dim: Dim) -> Self {
         assert!(dim > 0);
@@ -32,46 +32,6 @@ impl Board {
         }
         Self { dim, data }
     }
-    pub fn remove(&mut self, coord: Coord) -> Option<Cell> {
-        if let Some(cell) = self.get_mut(coord) {
-            Some(std::mem::take(cell))
-        } else {
-            None
-        }
-    }
-    pub fn get(&self, coord: Coord) -> Option<&Cell> {
-        let index = self.to_index(coord);
-        self.data.get(index)
-    }
-    pub fn get_mut(&mut self, coord: Coord) -> Option<&mut Cell> {
-        let index = self.to_index(coord);
-        self.data.get_mut(index)
-    }
-    pub fn swap(&mut self, coord0: Coord, coord1: Coord) {
-        let index0 = self.to_index(coord0);
-        let index1 = self.to_index(coord1);
-        self.data.swap(index0,index1);
-    }
-    pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut Cell;2]> {
-        let index0 = self.to_index(coord0);
-        let index1 = self.to_index(coord1);
-        if index0 == index1 || index0 >= self.len() || index1 >= self.len() {
-            return None
-        }
-        let ref_mut_0;
-        let ref_mut_1;
-        unsafe {
-            ref_mut_0 = &mut *(self.data.get_unchecked_mut(index0) as *mut _);
-            ref_mut_1 = &mut *(self.data.get_unchecked_mut(index1) as *mut _);
-        }
-        Some([ref_mut_0, ref_mut_1])
-    }
-    pub fn iter(&self) -> std::slice::Iter<Cell> {
-        self.data.iter()
-    }
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<Cell> {
-        self.data.iter_mut()
-    }
 }
 
 impl Default for Board {
@@ -82,7 +42,8 @@ impl Default for Board {
 
 impl std::fmt::Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for c in self.data.iter() {
+        let data = self.inner();
+        for c in data.iter() {
             write!(f,":{}",c)?;
         }
         Ok(())
@@ -92,13 +53,71 @@ impl std::fmt::Display for Board {
 impl std::ops::Index<Coord> for Board {
     type Output = Cell;
     fn index(&self, coord: Coord) -> & Self::Output {
-        self.data.index(self.to_index(coord))
+        let index = self.to_index(coord);
+        let data = self.inner();
+        data.index(index)
     }
 }
 
 impl std::ops::IndexMut<Coord> for Board {
     fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
-        self.data.index_mut(self.to_index(coord))
+        let index = self.to_index(coord);
+        let data = self.inner_mut();
+        data.index_mut(index)
     }
 }
 
+impl Board {
+    const fn to_index(&self, (row, col): Coord) -> usize {
+        let dim = self.dim as usize;
+        let row = row as usize;
+        let col = col as usize;
+        row * dim + col
+    }
+    pub fn remove(&mut self, coord: Coord) -> Option<Cell> {
+        if let Some(cell) = self.get_mut(coord) {
+            Some(std::mem::take(cell))
+        } else {
+            None
+        }
+    }
+    pub fn get(&self, coord: Coord) -> Option<&Cell> {
+        let index = self.to_index(coord);
+        let data = self.inner();
+        data.get(index)
+    }
+    pub fn get_mut(&mut self, coord: Coord) -> Option<&mut Cell> {
+        let index = self.to_index(coord);
+        let data = self.inner_mut();
+        data.get_mut(index)
+    }
+    pub fn swap(&mut self, coord0: Coord, coord1: Coord) {
+        let index0 = self.to_index(coord0);
+        let index1 = self.to_index(coord1);
+        let data = self.inner_mut();
+        data.swap(index0,index1);
+    }
+    pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut Cell;2]> {
+        let index0 = self.to_index(coord0);
+        let index1 = self.to_index(coord1);
+        if index0 == index1 || index0 >= self.len() || index1 >= self.len() {
+            return None
+        }
+        let ref_mut_0;
+        let ref_mut_1;
+        let data = self.inner_mut();
+        unsafe {
+            ref_mut_0 = &mut *(data.get_unchecked_mut(index0) as *mut _);
+            ref_mut_1 = &mut *(data.get_unchecked_mut(index1) as *mut _);
+        }
+        Some([ref_mut_0, ref_mut_1])
+    }
+    pub fn iter(&self) -> std::slice::Iter<Cell> {
+        let data = self.inner();
+        data.iter()
+    }
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<Cell> {
+        let data = self.inner_mut();
+        data.iter_mut()
+    }
+}
