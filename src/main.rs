@@ -1,7 +1,7 @@
-use ai_wargame::Game;
+use ai_wargame::{Game, DEFAULT_BOARD_DIM};
 
 fn main() {
-    let dim = 10;
+    let dim = DEFAULT_BOARD_DIM;
     // let drop_prob = None;
     let drop_prob = Some(0.05);
     let mut game = Game::new(dim, drop_prob);

@@ -1,6 +1,6 @@
 use crate::{Coord, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Game {
     player: Player,
     board: Board,

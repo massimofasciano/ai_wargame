@@ -1,20 +1,17 @@
-use crate::{Coord, Cell, Dim, DEFAULT_BOARD_SIZE, DEFAULT_BOARD_DIM};
+use crate::{Coord, Cell, Dim, DEFAULT_BOARD_DIM};
 
-pub type Board = BoardArray<DEFAULT_BOARD_SIZE>;
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct BoardArray<const SIZE: usize> {
-    data: [Cell;SIZE],
+#[derive(Debug, PartialEq, Clone)]
+pub struct Board {
+    data: Vec<Cell>,
     dim: Dim,
 }
 
-impl<const SIZE: usize> BoardArray<SIZE> {
-    pub const fn size(&self) -> usize {
-        SIZE
+impl Board {
+    pub fn size(&self) -> usize {
+        self.data.capacity()
     }
-    pub const fn len(&self) -> usize {
-        let dim = self.dim as usize;
-        dim * dim
+    pub fn len(&self) -> usize {
+        self.data.len()
     }
     pub const fn dim(&self) -> Dim {
         self.dim
@@ -27,11 +24,13 @@ impl<const SIZE: usize> BoardArray<SIZE> {
     }
     pub fn new(dim: Dim) -> Self {
         assert!(dim > 0);
-        assert!(dim as usize*dim as usize <= SIZE,"{}x{} board will not fit in array of size {}",dim,dim,SIZE);
-        Self {
-            dim,
-            data : [Cell::default();SIZE],
+        let dimu = dim as usize;
+        let cap = dimu * dimu;
+        let mut data = Vec::with_capacity(cap);
+        for _ in 0..cap {
+            data.push(Cell::default());
         }
+        Self { dim, data }
     }
     pub fn get(&self, coord: Coord) -> Option<&Cell> {
         let index = self.to_index(coord);
@@ -49,7 +48,7 @@ impl<const SIZE: usize> BoardArray<SIZE> {
     pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut Cell;2]> {
         let index0 = self.to_index(coord0);
         let index1 = self.to_index(coord1);
-        if index0 == index1 || index0 >= SIZE || index1 >= SIZE {
+        if index0 == index1 || index0 >= self.len() || index1 >= self.len() {
             return None
         }
         let ref_mut_0;
@@ -68,13 +67,13 @@ impl<const SIZE: usize> BoardArray<SIZE> {
     }
 }
 
-impl<const SIZE: usize> Default for BoardArray<SIZE> {
+impl Default for Board {
     fn default() -> Self {
         Self::new(DEFAULT_BOARD_DIM)
     }
 }
 
-impl<const SIZE: usize> std::fmt::Display for BoardArray<SIZE> {
+impl std::fmt::Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for c in self.data.iter() {
             write!(f,":{}",c)?;
@@ -83,14 +82,14 @@ impl<const SIZE: usize> std::fmt::Display for BoardArray<SIZE> {
     }
 }
 
-impl<const SIZE: usize> std::ops::Index<Coord> for BoardArray<SIZE> {
+impl std::ops::Index<Coord> for Board {
     type Output = Cell;
     fn index(&self, coord: Coord) -> & Self::Output {
         self.data.index(self.to_index(coord))
     }
 }
 
-impl<const SIZE: usize> std::ops::IndexMut<Coord> for BoardArray<SIZE> {
+impl std::ops::IndexMut<Coord> for Board {
     fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
         self.data.index_mut(self.to_index(coord))
     }
