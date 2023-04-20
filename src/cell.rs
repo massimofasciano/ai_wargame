@@ -112,6 +112,15 @@ impl<'a> BoardCellRefMut<'a> {
     pub fn into_inner(self) -> &'a mut BoardCell{
         self.try_into_inner().unwrap_or_else(|e|panic!("{}",e))
     }
+    pub fn try_to_inner(&'a mut self) -> Result<&'a mut BoardCell,anyhow::Error> {
+        match self {
+            Self::Ref(r) => Ok(*r),
+            Self::Empty => Err(anyhow!("can't get ref mut on empty cell")),
+        }
+    }
+    pub fn to_inner(&'a mut self) -> &'a mut BoardCell{
+        self.try_to_inner().unwrap_or_else(|e|panic!("{}",e))
+    }
 }
 
 #[derive(Debug, PartialEq, Default)]

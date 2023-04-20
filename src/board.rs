@@ -1,4 +1,4 @@
-use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, BoardCellRefMut};
+use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, BoardCellRefMut, BoardCellRef};
 
 use duplicate::duplicate_item;
 
@@ -40,15 +40,15 @@ impl<I> std::fmt::Display for T {
     }
 }
 
-#[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
-impl<I> std::ops::Index<Coord> for T {
-    type Output = BoardCell;
-    fn index(&self, coord: Coord) -> & Self::Output {
-        let index = self.to_index(coord);
-        let data = self.inner();
-        data.index(index)
-    }
-}
+// #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
+// impl<I> std::ops::Index<Coord> for T {
+//     type Output = BoardCell;
+//     fn index(&self, coord: Coord) -> & Self::Output {
+//         let index = self.to_index(coord);
+//         let data = self.inner();
+//         data.index(index)
+//     }
+// }
 
 // #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 // impl<I> std::ops::IndexMut<Coord> for T {
@@ -77,16 +77,15 @@ impl<I> T {
             None
         }
     }
-    pub fn get(&self, coord: Coord) -> Option<&BoardCell> {
+    pub fn get(&self, coord: Coord) -> Option<BoardCellRef> {
         let index = self.to_index(coord);
         let data = self.inner();
-        data.get(index)
+        if let Some(data) = data.get(index) {
+            Some(data.to_ref())
+        } else {
+            None
+        }
     }
-    // pub fn get_mut(&mut self, coord: Coord) -> Option<&mut BoardCell> {
-    //     let index = self.to_index(coord);
-    //     let data = self.inner_mut();
-    //     data.get_mut(index)
-    // }
     pub fn get_mut(&mut self, coord: Coord) -> Option<BoardCellRefMut> {
         let index = self.to_index(coord);
         let data = self.inner_mut();
