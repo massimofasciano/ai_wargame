@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome};
+use crate::{Coord, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo};
 
 use rand::seq::{IteratorRandom, SliceRandom};
 
@@ -208,13 +208,21 @@ impl Game {
             None
         }
     }
+    pub fn board_rect(&self) -> CoordPair {
+        CoordPair::new(Coord::new(0,0),Coord::new(self.dim(), self.dim()))
+    }
+    pub fn empty_coords<'a>(&'a self) -> impl Iterator<Item = Coord> + 'a {
+        self.board_rect().rect_iter().filter(|&c|self[c].is_empty())
+    }
+    pub fn player_coords<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
+        self.board_rect().rect_iter().filter(move|&c|!self[c].is_empty() && self[c].player().unwrap() == player)
+    }
     pub fn random_drop(&mut self) -> DropOutcome {
         use rand::Rng;
         let mut rng = rand::thread_rng();
         if self.drop_prob.is_some() && rng.gen::<f32>() < self.drop_prob.unwrap() {
             let unit_type = *[UnitType::Hacker,UnitType::Repair].choose(&mut rng).expect("expect a hacker or repair");
-            let board_rect = CoordPair::new(Coord::new(0,0),Coord::new(self.dim(), self.dim()));
-            if let Some(empty_coord) = board_rect.rect_iter().filter(|&c|self[c].is_empty()).choose(&mut rng) {
+            if let Some(empty_coord) = self.empty_coords().choose(&mut rng) {
                 println!("random drop of type {} at {}!",unit_type,empty_coord);
                 self.set_cell(empty_coord, Cell::new_unit(self.player(), unit_type));
                 DropOutcome::Drop {location:empty_coord, unit_type: unit_type}
@@ -236,7 +244,7 @@ impl Game {
     }
     pub fn perform_action(&mut self, action: Action) -> Result<ActionOutcome,()> {
         match action {
-            Action::Skip => Ok(ActionOutcome::Skipped),
+            Action::Pass => Ok(ActionOutcome::Passed),
             Action::Move { from, to } => {
                 self.unit_move(from, to)
             }
@@ -248,17 +256,17 @@ impl Game {
             }
         }
     }
-    pub fn play_turn_from_action(&mut self, action: Action) -> Result<(ActionOutcome,DropOutcome),()> {
+    pub fn play_turn_from_action(&mut self, action: Action) -> Result<(Action,ActionOutcome,DropOutcome),()> {
         let outcome = self.perform_action(action);
         if let Ok(outcome) = outcome {
             let drop_outcome = self.random_drop();
             self.next_player();
-            Ok((outcome,drop_outcome))
+            Ok((action,outcome,drop_outcome))
         } else {
             Err(())
         }
     }
-    pub fn play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<(ActionOutcome,DropOutcome),()> {
+    pub fn play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<(Action,ActionOutcome,DropOutcome),()> {
         if let Ok(action) = self.action_from_coords(from, to) {
             self.play_turn_from_action(action)
         } else {
@@ -266,18 +274,15 @@ impl Game {
         }
     }
     pub fn console_play_turn(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
-        if let Ok(action) = self.action_from_coords(from, to) {
+        if let Ok((action, outcome,drop_outcome)) = self.play_turn_from_coords(from, to) {
             println!("# {} {}", self.player(), action);
-            if let Ok((outcome,drop_outcome)) = self.play_turn_from_action(action) {
-                println!("# action outcome is {}", outcome);
-                if drop_outcome.has_dropped() {
-                    println!("# {}", drop_outcome);
-                }
-                true
-            } else {
-                println!("*** this should not happen! action was pre-validated. ***");
-                false
+            if outcome.is_useful_info() {
+                println!("# {}", outcome);
             }
+            if drop_outcome.is_useful_info() {
+                println!("# {}", drop_outcome);
+            }
+            true
         } else {
             false
         }
@@ -332,7 +337,7 @@ impl Game {
             // it's our turn and we are acting on our own unit
             if from == to {
                 // destination is same as source => we wish to skip this move
-                Ok(Action::Skip)
+                Ok(Action::Pass)
             } else if self[to].is_empty() {
                 // destination empty so this is a move
                 Ok(Action::Move { from, to })

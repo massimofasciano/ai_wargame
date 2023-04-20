@@ -18,7 +18,7 @@ pub use game::Game;
 pub use cell::Cell;
 pub use unit_type::UnitType;
 pub use player::Player;
-pub use actions::{Action, ActionOutcome, DropOutcome};
+pub use actions::{Action, ActionOutcome, DropOutcome, IsUsefulInfo};
 
 const MAX_HEALTH : Health = 9;
 pub const DEFAULT_BOARD_DIM : Dim = 10;
