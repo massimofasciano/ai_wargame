@@ -1,3 +1,5 @@
+use std::ops::{Add, Sub, Neg};
+
 use crate::{Dim, CoordTuple};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -14,16 +16,22 @@ impl Coord {
         let (row,col) = coord;
         Self {row,col}
     }
-    pub fn to_string_as_letter_number(&self) -> String {
+    pub fn try_to_string_as_letter_number(&self) -> Result<String,()> {
         let (row,col) = (self.row,self.col);
-        let row_char = if row < 26 {
+        let row_char = if row < 0 {
+            '?'
+        } else if row < 26 {
             (row as u8 +'A' as u8) as char
         } else if row < 52 {
             (row as u8-26 +'a' as u8) as char
         } else {
             '?'
         };
-        format!("{}{}", row_char, col)
+        if col > 0 && row_char != '?' {
+            Ok(format!("{}{}", row_char, col))
+        } else {
+            Err(())
+        }
     }
     pub fn to_string_as_tuple(&self) -> String {
         let (row,col) = (self.row,self.col);
@@ -36,12 +44,33 @@ impl Coord {
 
 impl std::fmt::Display for Coord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string_as_letter_number())
+        write!(f, "{}", self.try_to_string_as_letter_number().unwrap_or(self.to_string_as_tuple()))
     }
 }
 
 impl From<CoordTuple> for Coord {
     fn from(coord: CoordTuple) -> Self {
         Self::new_from_tuple(coord)
+    }
+}
+
+impl Add for Coord {
+    type Output = Coord;
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(self.row+rhs.row, self.col+rhs.col)
+    }
+}
+
+impl Sub for Coord {
+    type Output = Coord;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(self.row-rhs.row, self.col-rhs.col)
+    }
+}
+
+impl Neg for Coord {
+    type Output = Coord;
+    fn neg(self) -> Self::Output {
+        Self::new(-self.row, -self.col)
     }
 }
