@@ -11,8 +11,6 @@ pub struct Game {
     drop_prob: Option<f32>,
 }
 
-static STATIC_EMPTY_CELL : BoardCell = BoardCell::Empty;
-
 impl Game {
     pub fn new(dim: Dim, drop_prob: Option<f32>) -> Self {
         let mut game = Self {
@@ -61,12 +59,7 @@ impl Game {
     }
     pub fn get_cell(&self, coord: Coord) -> Option<&BoardCell> {
         if self.is_valid_position(coord) {
-            let cell_ref = self.board.get(coord).unwrap();
-            if cell_ref.is_empty() {
-                Some(&STATIC_EMPTY_CELL)
-            } else {
-                Some(cell_ref.to_inner())
-            }
+            Some(self.board.get(coord).unwrap())
         } else {
             None
         }

@@ -75,12 +75,12 @@ impl BoardCell {
             _ => BoardCellRefMut::Ref(self),
         }
     }
-    pub fn to_ref<'a>(&'a self) -> BoardCellRef<'a> {
-        match self {
-            Self::Empty => BoardCellRef::Empty,
-            _ => BoardCellRef::Ref(self),
-        }
-    }
+    // pub fn to_ref<'a>(&'a self) -> BoardCellRef<'a> {
+    //     match self {
+    //         Self::Empty => BoardCellRef::Empty,
+    //         _ => BoardCellRef::Ref(self),
+    //     }
+    // }
 }
 
 impl std::fmt::Display for BoardCell {
@@ -123,37 +123,37 @@ impl<'a> BoardCellRefMut<'a> {
     }
 }
 
-#[derive(Debug, PartialEq, Default)]
-pub enum BoardCellRef<'a> {
-    #[default]
-    Empty,
-    Ref(&'a BoardCell),
-}
+// #[derive(Debug, PartialEq, Default)]
+// pub enum BoardCellRef<'a> {
+//     #[default]
+//     Empty,
+//     Ref(&'a BoardCell),
+// }
 
-impl<'a> BoardCellRef<'a> {
-    pub fn is_empty(&self) -> bool {
-        *self == Self::Empty
-    }
-    pub fn is_ref(&self) -> bool {
-        !self.is_empty()
-    }
-    pub fn to_inner(&self) -> &'a BoardCell{
-        match self {
-            Self::Ref(r) => r,
-            Self::Empty => panic!("can't get ref on empty cell"),
-        }
-    }
-    pub fn try_to_inner(&self) -> Result<&'a BoardCell,anyhow::Error> {
-        match self {
-            Self::Ref(r) => Ok(r),
-            Self::Empty => Err(anyhow!("can't get ref on empty cell")),
-        }
-    }
-}
+// impl<'a> BoardCellRef<'a> {
+//     pub fn is_empty(&self) -> bool {
+//         *self == Self::Empty
+//     }
+//     pub fn is_ref(&self) -> bool {
+//         !self.is_empty()
+//     }
+//     pub fn to_inner(&self) -> &'a BoardCell{
+//         match self {
+//             Self::Ref(r) => r,
+//             Self::Empty => panic!("can't get ref on empty cell"),
+//         }
+//     }
+//     pub fn try_to_inner(&self) -> Result<&'a BoardCell,anyhow::Error> {
+//         match self {
+//             Self::Ref(r) => Ok(r),
+//             Self::Empty => Err(anyhow!("can't get ref on empty cell")),
+//         }
+//     }
+// }
 
-impl<'a> std::ops::Deref for BoardCellRef<'a> {
-    type Target = BoardCell;
-    fn deref(&self) -> &Self::Target {
-        self.to_inner()
-    }
-}
+// impl<'a> std::ops::Deref for BoardCellRef<'a> {
+//     type Target = BoardCell;
+//     fn deref(&self) -> &Self::Target {
+//         self.to_inner()
+//     }
+// }

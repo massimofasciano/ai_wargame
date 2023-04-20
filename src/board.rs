@@ -1,4 +1,4 @@
-use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, BoardCellRefMut, BoardCellRef};
+use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, BoardCellRefMut};
 
 use duplicate::duplicate_item;
 
@@ -77,11 +77,11 @@ impl<I> T {
             None
         }
     }
-    pub fn get(&self, coord: Coord) -> Option<BoardCellRef> {
+    pub fn get(&self, coord: Coord) -> Option<&BoardCell> {
         let index = self.to_index(coord);
         let data = self.inner();
         if let Some(data) = data.get(index) {
-            Some(data.to_ref())
+            Some(data)
         } else {
             None
         }
