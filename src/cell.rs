@@ -1,13 +1,15 @@
 use crate::{UnitType, Player, Unit, DisplayFirstLetter};
 
+use anyhow::anyhow;
+
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
-pub enum Cell {
+pub enum BoardCell {
     #[default]
     Empty,
     Unit { player:Player, unit:Unit },
 }
 
-impl Cell {
+impl BoardCell {
     pub const fn new() -> Self {
         Self::Empty
     }
@@ -51,27 +53,6 @@ impl Cell {
             false
         }
     }
-    // pub fn remove_dead(&mut self) {
-    //     if let Some((_, unit)) = self.unit() {
-    //         if unit.health == 0 {
-    //             *self = Self::default();
-    //         }
-    //     }
-    // }
-    // pub fn interact(&mut self, target: &mut Self) {
-    //     let (player_source,unit_source) = self.unit_mut().unwrap();
-    //     let (player_target,unit_target) = target.unit_mut().unwrap();
-    //     if player_source != player_target {
-    //         // it's an opposing unit so we try to damage it (it will damage us back)
-    //         unit_source.apply_damage(unit_target);
-    //         unit_target.apply_damage(unit_source);
-    //         self.remove_dead();
-    //         target.remove_dead();
-    //     } else {
-    //         // it's our unit so we try to repair it
-    //         unit_source.apply_repair(unit_target);
-    //     }
-    // }
     pub fn to_pretty_compact_string(&self) -> String {
         if self.is_empty() {
             String::from(" . ")
@@ -80,7 +61,7 @@ impl Cell {
         }
     }
     pub fn to_compact_string(&self) -> String {
-        use Cell::*;
+        use BoardCell::*;
         match self {
             Empty => String::from(""),
             Unit { player, unit } => format!("{}{}{:1}",
@@ -88,10 +69,38 @@ impl Cell {
                 unit.unit_type.to_first_letter().to_ascii_uppercase(),unit.health),
         }
     }
+    pub fn to_ref_mut<'a>(&'a mut self) -> BoardCellRefMut<'a> {
+        BoardCellRefMut::Ref(self)
+    }
 }
 
-impl std::fmt::Display for Cell {
+impl std::fmt::Display for BoardCell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_compact_string())
+    }
+}
+
+#[derive(Debug, PartialEq, Default)]
+pub enum BoardCellRefMut<'a> {
+    #[default]
+    Empty,
+    Ref(&'a mut BoardCell),
+}
+
+impl<'a> BoardCellRefMut<'a> {
+    pub fn is_empty(&self) -> bool {
+        *self == Self::Empty
+    }
+    pub fn is_ref(&self) -> bool {
+        !self.is_empty()
+    }
+    pub fn try_into_inner(self) -> Result<&'a mut BoardCell,anyhow::Error> {
+        match self {
+            Self::Ref(r) => Ok(r),
+            Self::Empty => Err(anyhow!("can't get ref mut on empty cell")),
+        }
+    }
+    pub fn into_inner(self) -> &'a mut BoardCell{
+        self.try_into_inner().unwrap_or_else(|e|panic!("{}",e))
     }
 }

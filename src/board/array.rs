@@ -1,8 +1,8 @@
-use crate::{Cell, Dim, DEFAULT_BOARD_SIZE};
+use crate::{BoardCell, Dim, DEFAULT_BOARD_SIZE};
 
 pub type Board = BoardArray<DEFAULT_BOARD_SIZE>;
 
-pub type BoardData<const SIZE: usize> = [Cell;SIZE];
+pub type BoardData<const SIZE: usize> = [BoardCell;SIZE];
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BoardArray<const SIZE: usize> {

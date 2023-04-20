@@ -1,6 +1,6 @@
-use crate::{Cell, Dim};
+use crate::{BoardCell, Dim};
 
-pub type BoardData = Vec<Cell>;
+pub type BoardData = Vec<BoardCell>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Board {

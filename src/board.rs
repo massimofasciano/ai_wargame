@@ -1,4 +1,4 @@
-use crate::{Coord, Cell, Dim, DEFAULT_BOARD_DIM};
+use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, BoardCellRefMut};
 
 use duplicate::duplicate_item;
 
@@ -42,7 +42,7 @@ impl<I> std::fmt::Display for T {
 
 #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> std::ops::Index<Coord> for T {
-    type Output = Cell;
+    type Output = BoardCell;
     fn index(&self, coord: Coord) -> & Self::Output {
         let index = self.to_index(coord);
         let data = self.inner();
@@ -50,14 +50,14 @@ impl<I> std::ops::Index<Coord> for T {
     }
 }
 
-#[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
-impl<I> std::ops::IndexMut<Coord> for T {
-    fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
-        let index = self.to_index(coord);
-        let data = self.inner_mut();
-        data.index_mut(index)
-    }
-}
+// #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
+// impl<I> std::ops::IndexMut<Coord> for T {
+//     fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
+//         let index = self.to_index(coord);
+//         let data = self.inner_mut();
+//         data.index_mut(index)
+//     }
+// }
 
 #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> T {
@@ -68,22 +68,38 @@ impl<I> T {
         let col = col as usize;
         row * dim + col
     }
-    pub fn remove(&mut self, coord: Coord) -> Option<Cell> {
-        if let Some(cell) = self.get_mut(coord) {
-            Some(std::mem::take(cell))
+    pub fn remove(&mut self, coord: Coord) -> Option<BoardCell> {
+        let index = self.to_index(coord);
+        let data = self.inner_mut();
+        if let Some(data_mut) = data.get_mut(index) {
+            Some(std::mem::take(data_mut))
         } else {
             None
         }
     }
-    pub fn get(&self, coord: Coord) -> Option<&Cell> {
+    pub fn get(&self, coord: Coord) -> Option<&BoardCell> {
         let index = self.to_index(coord);
         let data = self.inner();
         data.get(index)
     }
-    pub fn get_mut(&mut self, coord: Coord) -> Option<&mut Cell> {
+    // pub fn get_mut(&mut self, coord: Coord) -> Option<&mut BoardCell> {
+    //     let index = self.to_index(coord);
+    //     let data = self.inner_mut();
+    //     data.get_mut(index)
+    // }
+    pub fn get_mut(&mut self, coord: Coord) -> Option<BoardCellRefMut> {
         let index = self.to_index(coord);
         let data = self.inner_mut();
-        data.get_mut(index)
+        if let Some(data_mut) = data.get_mut(index) {
+            Some(data_mut.to_ref_mut())
+        } else {
+            None
+        }
+    }
+    pub fn set(&mut self, coord: Coord, value: BoardCell) {
+        let index = self.to_index(coord);
+        let data = self.inner_mut();
+        data[index] = value;
     }
     pub fn swap(&mut self, coord0: Coord, coord1: Coord) {
         let index0 = self.to_index(coord0);
@@ -91,7 +107,7 @@ impl<I> T {
         let data = self.inner_mut();
         data.swap(index0,index1);
     }
-    pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut Cell;2]> {
+    pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut BoardCell;2]> {
         let index0 = self.to_index(coord0);
         let index1 = self.to_index(coord1);
         if index0 == index1 || index0 >= self.len() || index1 >= self.len() {
@@ -106,11 +122,11 @@ impl<I> T {
         }
         Some([ref_mut_0, ref_mut_1])
     }
-    pub fn iter(&self) -> std::slice::Iter<Cell> {
+    pub fn iter(&self) -> std::slice::Iter<BoardCell> {
         let data = self.inner();
         data.iter()
     }
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<Cell> {
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<BoardCell> {
         let data = self.inner_mut();
         data.iter_mut()
     }

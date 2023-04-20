@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Unit, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellRefMut};
 
 use rand::seq::{IteratorRandom, SliceRandom};
 
@@ -41,8 +41,8 @@ impl Game {
         let p1 = p_all.next().unwrap();
         let p2 = p_all.next().unwrap();
         for (row,col,unit) in init {
-            game[Coord::new(row,col)] = Cell::Unit{player: p2, unit: unit.clone()};
-            game[Coord::new(md-row,col)] = Cell::Unit{player: p1, unit: unit.clone()};
+            game.set_cell((row,col),BoardCell::Unit{player: p2, unit: unit.clone()});
+            game.set_cell((md-row,col),BoardCell::Unit{player: p1, unit: unit.clone()});
         }
         game.drop_prob = drop_prob;
         game
@@ -50,33 +50,41 @@ impl Game {
     pub fn dim(&self) -> Dim {
         self.dim
     }
-    pub fn remove_cell(&mut self, coord: Coord) -> Option<Cell> {
+    pub fn remove_cell(&mut self, coord: Coord) -> Option<BoardCell> {
         if self.is_valid_position(coord) {
             self.board.remove(coord)
         } else {
             None
         }
     }
-    pub fn get_cell(&self, coord: Coord) -> Option<&Cell> {
+    pub fn get_cell(&self, coord: Coord) -> Option<&BoardCell> {
         if self.is_valid_position(coord) {
             Some(&self.board.get(coord).unwrap())
         } else {
             None
         }
     }
-    pub fn get_cell_mut(&mut self, coord: Coord) -> Option<&mut Cell> {
+    // pub fn get_cell_mut(&mut self, coord: Coord) -> Option<&mut BoardCell> {
+    //     if self.is_valid_position(coord) {
+    //         self.board.get_mut(coord)
+    //     } else {
+    //         None
+    //     }
+    // }
+    pub fn get_cell_mut(&mut self, coord: Coord) -> Option<BoardCellRefMut> {
         if self.is_valid_position(coord) {
             self.board.get_mut(coord)
         } else {
             None
         }
     }
-    pub fn set_cell(&mut self, coord: Coord, value: Cell) {
+    pub fn set_cell(&mut self, coord: impl Into<Coord>, value: BoardCell) {
+        let coord = coord.into();
         if self.is_valid_position(coord) {
-            self.board[coord] = value;
+            self.board.set(coord,value);
         }
     }
-    pub fn get_two_cells_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut Cell;2]> {
+    pub fn get_two_cells_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut BoardCell;2]> {
         if self.is_valid_position(coord0) &&
             self.is_valid_position(coord1) &&
             coord0 != coord1
@@ -122,44 +130,13 @@ impl Game {
     }
     pub fn unit_move(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,()> {
         if self.is_valid_move(from, to) {
-            self[to] = self.remove_cell(from).unwrap();
+            let removed = self.remove_cell(from).unwrap();
+            self.set_cell(to,removed);
             Ok(ActionOutcome::Moved { delta: to-from })
         } else {
             Err(())
         }
     }
-    // pub fn remove_dead(&mut self) {
-    //     for cell in self.board.iter_mut() {
-    //         cell.remove_dead();
-    //     }
-    // }
-    // pub fn resolve_conflicts(&mut self) {
-    //     for row in 0..BOARD_DIM {
-    //         for col in 0..BOARD_DIM {
-    //             let coord_source = (row,col);
-    //             if self[coord_source].is_unit() {
-    //                 for rd in -1..=1 {
-    //                     for cd in -1..=1 {
-    //                         let coord_target = (row + rd, col + cd);
-    //                         if self.is_valid_position(coord_target) && self[coord_target].is_unit() && coord_target != coord_source
-    //                         {
-    //                             let (source, target) = self.get_2_cells_mut(coord_source, coord_target).unwrap();
-    //                             let (player_source,unit_source) = source.unit_mut().unwrap();
-    //                             let (player_target,unit_target) = target.unit_mut().unwrap();
-    //                             if player_source != player_target {
-    //                                 // opponents
-    //                                 unit_source.apply_damage(unit_target);
-    //                             } else {
-    //                                 // friends
-    //                                 unit_source.apply_repair(unit_target);
-    //                             }
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
     pub fn check_if_winner(&self) -> Option<Option<Player>>{
         assert_eq!(Player::cardinality(),2);
         let mut p_all = Player::all();
@@ -224,7 +201,7 @@ impl Game {
             let unit_type = *[UnitType::Hacker,UnitType::Repair].choose(&mut rng).expect("expect a hacker or repair");
             if let Some(empty_coord) = self.empty_coords().choose(&mut rng) {
                 println!("random drop of type {} at {}!",unit_type,empty_coord);
-                self.set_cell(empty_coord, Cell::new_unit(self.player(), unit_type));
+                self.set_cell(empty_coord, BoardCell::new_unit(self.player(), unit_type));
                 DropOutcome::Drop {location:empty_coord, unit_type: unit_type}
             } else {
                 DropOutcome::NoDrop
@@ -234,10 +211,11 @@ impl Game {
         }
     }
     pub fn remove_dead(&mut self, coord: Coord) {
-        if let Some(cell) = self.get_cell_mut(coord) {
+        if let Some(cell) = self.get_cell(coord) {
             if let Some((_, unit)) = cell.unit() {
                 if unit.health == 0 {
-                    *cell = Cell::default();
+                    self.remove_cell(coord);
+                    // *cell = BoardCell::default();
                 }
             }
         }
@@ -407,15 +385,9 @@ impl std::fmt::Display for Game {
 }
 
 impl std::ops::Index<Coord> for Game {
-    type Output = Cell;
+    type Output = BoardCell;
     fn index(&self, coord: Coord) -> & Self::Output {
         self.get_cell(coord).expect("expected valid coordinates")
-    }
-}
-
-impl std::ops::IndexMut<Coord> for Game {
-    fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
-        self.get_cell_mut(coord).expect("expected valid coordinates")
     }
 }
 

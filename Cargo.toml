@@ -4,6 +4,7 @@ version = "0.3.2"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.70"
 derive_more = "0.99.17"
 duplicate = "1.0.0"
 enum-iterator = "1.4.0"
