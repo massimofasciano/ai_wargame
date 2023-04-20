@@ -61,7 +61,8 @@ impl<I> std::ops::IndexMut<Coord> for T {
 
 #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> T {
-    const fn to_index(&self, (row, col): Coord) -> usize {
+    const fn to_index(&self, coord: Coord) -> usize {
+        let (row,col) = coord.to_tuple();
         let dim = self.dim() as usize;
         let row = row as usize;
         let col = col as usize;

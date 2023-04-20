@@ -39,8 +39,8 @@ impl Game {
         let p1 = p_all.next().unwrap();
         let p2 = p_all.next().unwrap();
         for (row,col,unit) in init {
-            game[(row,col)] = Cell::Unit{player: p2, unit: unit.clone()};
-            game[(md-row,col)] = Cell::Unit{player: p1, unit: unit.clone()};
+            game[Coord::new(row,col)] = Cell::Unit{player: p2, unit: unit.clone()};
+            game[Coord::new(md-row,col)] = Cell::Unit{player: p1, unit: unit.clone()};
         }
         game.drop_prob = drop_prob;
         game
@@ -96,7 +96,7 @@ impl Game {
         self.player
     }
     pub fn is_valid_position(&self, coord : Coord) -> bool {
-        let (row,col) = coord;
+        let (row,col) = coord.to_tuple();
         let is_valid = row >= 0 && col >= 0 && row < self.dim && col < self.dim;
         debug_assert_eq!(is_valid,true,"({},{}) is not valid for a {}x{} board",row,col,self.dim,self.dim);
         is_valid
@@ -109,14 +109,14 @@ impl Game {
     pub fn neighbors(&self, coord0 : Coord, coord1 : Coord) -> bool {
         coord0 != coord1 &&
         self.is_valid_position(coord0) && self.is_valid_position(coord1) && 
-        (coord1.0 - coord0.0).abs() <= 1 && (coord1.1 - coord0.1).abs() <= 1
+        (coord1.row - coord0.row).abs() <= 1 && (coord1.col - coord0.col).abs() <= 1
     }
     pub fn in_range(&self, range: u8, coord0 : Coord, coord1 : Coord) -> bool {
         coord0 == coord1 || // we consider our own position as in range
         self.is_valid_position(coord0) && 
         self.is_valid_position(coord1) && 
-        (coord1.0 - coord0.0).abs() as u8 <= range && 
-        (coord1.1 - coord0.1).abs() as u8 <= range
+        (coord1.row - coord0.row).abs() as u8 <= range && 
+        (coord1.col - coord0.col).abs() as u8 <= range
     }
     pub fn move_unit(&mut self, from: Coord, to: Coord) -> bool {
         if self.is_valid_move(from, to) {
@@ -201,7 +201,7 @@ impl Game {
             let c1 = caps[2].parse::<Dim>().unwrap();
             let r2 = caps[3].chars().next().unwrap().to_ascii_uppercase() as Dim - 65;
             let c2 = caps[4].parse::<Dim>().unwrap();
-            Some(((r1,c1),(r2,c2)))
+            Some((Coord::new(r1,c1),Coord::new(r2,c2)))
         } else {
             None
         }
@@ -216,7 +216,7 @@ impl Game {
             use UnitType::*;
             let unit_types = [Hacker,Repair];
             let unit_type = unit_types[rng.gen_range(0..unit_types.len())];
-            let dest = (rng.gen_range(0..self.dim()),rng.gen_range(0..self.dim()));
+            let dest = Coord::new(rng.gen_range(0..self.dim()),rng.gen_range(0..self.dim()));
             let mut new = Cell::new_unit(self.player(), unit_type);
             println!("random drop of type {} at {}!",unit_type,Self::coord_to_string(dest));
             // let target = &mut self[dest];
@@ -257,8 +257,9 @@ impl Game {
             }
         }
     }
-    pub fn perform_action(&mut self, from: Coord, to: Coord) -> bool {
+    pub fn perform_action(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
         // we return a bool indicating if the move was valid
+        let (from, to) = (from.into(),to.into());
         let valid = if self.in_range(1, from, to) && 
             self[from].is_unit() && 
             self.player() == self[from].player().unwrap() 
@@ -310,13 +311,14 @@ impl Game {
         for row in 0..self.dim {
             print!("{:>2}: ",(row as u8 +'A' as u8) as char);
             for col in 0..self.dim {
-                let cell = self[(row,col)];
+                let cell = self[Coord::new(row,col)];
                 print!(" {}",cell.to_pretty_compact_string());
             }
             println!();
         }
     }
-    pub fn coord_to_string((row, col) : Coord) -> String {
+    pub fn coord_to_string(coord : Coord) -> String {
+        let (row,col) = coord.to_tuple();
         format!("{}{}",(row as u8 +'A' as u8) as char, col)
     }
 }

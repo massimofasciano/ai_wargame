@@ -1,21 +1,25 @@
 pub mod game;
 pub mod board;
-pub use game::Game;
 pub mod cell;
-pub use cell::Cell;
 pub mod unit;
 pub use unit::Unit;
 pub mod unit_type;
-pub use unit_type::UnitType;
 pub mod player;
-pub use player::Player;
+pub mod actions;
+pub mod coord;
 
 // pub use board::array::Board;
 pub use board::vec::Board;
 
 type Dim = i8;
-type Coord = (Dim,Dim);
+type CoordTuple = (Dim,Dim);
+// type Coord = CoordTuple;
+pub use coord::Coord;
 type Health = u8;
+pub use game::Game;
+pub use cell::Cell;
+pub use unit_type::UnitType;
+pub use player::Player;
 
 const MAX_HEALTH : Health = 9;
 pub const DEFAULT_BOARD_DIM : Dim = 10;

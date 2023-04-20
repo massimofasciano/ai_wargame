@@ -1,4 +1,4 @@
-use ai_wargame::{Game, DEFAULT_BOARD_DIM};
+use ai_wargame::{Game, DEFAULT_BOARD_DIM, Coord};
 
 fn main() {
     let dim = DEFAULT_BOARD_DIM;
@@ -27,8 +27,8 @@ fn main() {
                 use rand::Rng;
                 let mut rng = rand::thread_rng();
                 let md = game.dim();
-                let from = (rng.gen_range(0..md), rng.gen_range(0..md));
-                let to = (rng.gen_range(0..md), rng.gen_range(0..md));
+                let from = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
+                let to = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
                 if !game.perform_action(from, to) {
                     // println!("Invalid move!");
                     continue;
