@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter};
+use crate::{Coord, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter, Action, ActionOutcome};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Game {
@@ -118,12 +118,12 @@ impl Game {
         (coord1.row - coord0.row).abs() as u8 <= range && 
         (coord1.col - coord0.col).abs() as u8 <= range
     }
-    pub fn move_unit(&mut self, from: Coord, to: Coord) -> bool {
+    pub fn unit_move(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,()> {
         if self.is_valid_move(from, to) {
             self[to] = self.remove_cell(from).unwrap();
-            true
+            Ok(ActionOutcome::Moved { delta: to-from })
         } else {
-            false
+            Err(())
         }
     }
     // pub fn remove_dead(&mut self) {
@@ -257,20 +257,79 @@ impl Game {
             }
         }
     }
-    pub fn perform_action(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
-        // we return a bool indicating if the move was valid
+    pub fn perform_action(&mut self, action: Action) -> Result<ActionOutcome,()> {
+        let outcome = match action {
+            Action::Skip => Ok(ActionOutcome::Skipped),
+            Action::Move { from, to } => {
+                self.unit_move(from, to)
+            }
+            Action::Repair { from, to } => {
+                self.unit_repair(from, to)
+            }
+            Action::Attack { from, to } => {
+                self.unit_combat(from, to)
+            }
+        };
+        if outcome.is_ok() {
+            self.random_drop();
+            self.next_player();
+        };
+        outcome
+    }
+    pub fn unit_combat(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,()> {
+        if self.in_range(1, from, to) && 
+            self[from].is_unit() && 
+            self[to].is_unit() 
+        {
+            let [source, target] = self.get_two_cells_mut(from, to).unwrap();
+            let (player_source,unit_source) = source.unit_mut().unwrap();
+            let (player_target,unit_target) = target.unit_mut().unwrap();
+            if player_source != player_target {
+                // it's an opposing unit so we try to damage it (it will damage us back)
+                let damage_to_target = unit_source.apply_damage(unit_target);
+                let damage_to_source = unit_target.apply_damage(unit_source);
+                self.remove_dead(from);
+                self.remove_dead(to);
+                Ok(ActionOutcome::Damaged { to_source: damage_to_source, to_target: damage_to_target })
+            } else {
+                Err(())
+            }
+        } else {
+            Err(())
+        }
+    }
+    pub fn unit_repair(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,()> {
+        if self.in_range(1, from, to) && 
+            self[from].is_unit() && 
+            self[to].is_unit() 
+        {
+            let [source, target] = self.get_two_cells_mut(from, to).unwrap();
+            let (player_source,unit_source) = source.unit_mut().unwrap();
+            let (player_target,unit_target) = target.unit_mut().unwrap();
+            if player_source == player_target {
+                // it's a friendly unit so we can try to repair it
+                let repair_amount = unit_source.apply_repair(unit_target);
+                Ok(ActionOutcome::Repaired { amount: repair_amount })
+            } else {
+                Err(())
+            }
+        } else {
+            Err(())
+        }
+    }
+    pub fn validate_action(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<Action,()> {
         let (from, to) = (from.into(),to.into());
-        let valid = if self.in_range(1, from, to) && 
+        if self.in_range(1, from, to) && 
             self[from].is_unit() && 
             self.player() == self[from].player().unwrap() 
         {
             // it's our turn and we are acting on our own unit
             if from == to {
                 // destination is same as source => we wish to skip this move
-                true
+                Ok(Action::Skip)
             } else if self[to].is_empty() {
                 // destination empty so this is a move
-                self.move_unit(from, to)
+                Ok(Action::Move { from, to })
             } else if self[to].is_unit() {
                 // destination is a unit
                 let [source, target] = self.get_two_cells_mut(from, to).unwrap();
@@ -278,28 +337,25 @@ impl Game {
                 let (player_target,unit_target) = target.unit_mut().unwrap();
                 if player_source != player_target {
                     // it's an opposing unit so we try to damage it (it will damage us back)
-                    unit_source.apply_damage(unit_target);
-                    unit_target.apply_damage(unit_source);
-                    // source.remove_dead();
-                    // target.remove_dead();
-                    self.remove_dead(from);
-                    self.remove_dead(to);
-                    true
+                    if unit_source.can_damage(unit_target) {
+                        Ok(Action::Attack { from, to })
+                    } else {
+                        Err(())
+                    }
                 } else {
                     // it's our unit so we try to repair it (if repair not possible then action is not valid)
-                    unit_source.apply_repair(unit_target) > 0
+                    if unit_source.can_repair(unit_target) {
+                        Ok(Action::Repair { from, to })
+                    } else {
+                        Err(())
+                    }
                 }
             } else {
-                false
+                Err(())
             }
         } else {
-            false
-        };
-        if valid {
-            self.random_drop();
-            self.next_player();
-        };
-        valid
+            Err(())
+        }
     }
     pub fn pretty_print(&self) {
         println!("Next player: {}",self.player());

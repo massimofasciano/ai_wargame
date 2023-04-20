@@ -27,7 +27,7 @@ impl Coord {
         } else {
             '?'
         };
-        if col > 0 && row_char != '?' {
+        if col >= 0 && row_char != '?' {
             Ok(format!("{}{}", row_char, col))
         } else {
             Err(())
