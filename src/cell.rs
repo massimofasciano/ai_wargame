@@ -70,7 +70,10 @@ impl BoardCell {
         }
     }
     pub fn to_ref_mut<'a>(&'a mut self) -> BoardCellRefMut<'a> {
-        BoardCellRefMut::Ref(self)
+        match self {
+            Self::Empty => BoardCellRefMut::Empty,
+            _ => BoardCellRefMut::Ref(self),
+        }
     }
 }
 

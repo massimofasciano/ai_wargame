@@ -84,7 +84,7 @@ impl Game {
             self.board.set(coord,value);
         }
     }
-    pub fn get_two_cells_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut BoardCell;2]> {
+    pub fn get_two_cells_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[BoardCellRefMut;2]> {
         if self.is_valid_position(coord0) &&
             self.is_valid_position(coord1) &&
             coord0 != coord1
@@ -271,8 +271,8 @@ impl Game {
             self[to].is_unit() 
         {
             let [source, target] = self.get_two_cells_mut(from, to).unwrap();
-            let (player_source,unit_source) = source.unit_mut().unwrap();
-            let (player_target,unit_target) = target.unit_mut().unwrap();
+            let (player_source,unit_source) = source.try_into_inner().expect("not empty").unit_mut().unwrap();
+            let (player_target,unit_target) = target.try_into_inner().expect("not empty").unit_mut().unwrap();
             if player_source != player_target {
                 // it's an opposing unit so we try to damage it (it will damage us back)
                 let damage_to_target = unit_source.apply_damage(unit_target);
@@ -293,8 +293,8 @@ impl Game {
             self[to].is_unit() 
         {
             let [source, target] = self.get_two_cells_mut(from, to).unwrap();
-            let (player_source,unit_source) = source.unit_mut().unwrap();
-            let (player_target,unit_target) = target.unit_mut().unwrap();
+            let (player_source,unit_source) = source.try_into_inner().expect("not empty").unit_mut().unwrap();
+            let (player_target,unit_target) = target.try_into_inner().expect("not empty").unit_mut().unwrap();
             if player_source == player_target {
                 // it's a friendly unit so we can try to repair it
                 let repair_amount = unit_source.apply_repair(unit_target);
@@ -322,8 +322,8 @@ impl Game {
             } else if self[to].is_unit() {
                 // destination is a unit
                 let [source, target] = self.get_two_cells_mut(from, to).unwrap();
-                let (player_source,unit_source) = source.unit_mut().unwrap();
-                let (player_target,unit_target) = target.unit_mut().unwrap();
+                let (player_source,unit_source) = source.try_into_inner().expect("not empty").unit_mut().unwrap();
+                let (player_target,unit_target) = target.try_into_inner().expect("not empty").unit_mut().unwrap();
                 if player_source != player_target {
                     // it's an opposing unit so we try to damage it (it will damage us back)
                     if unit_source.can_damage(unit_target) {
