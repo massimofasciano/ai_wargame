@@ -4,7 +4,7 @@ use crate::Dim;
 
 pub type CoordTuple = (Dim,Dim);
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Coord {
     pub row: Dim,
     pub col: Dim,

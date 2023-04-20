@@ -3,7 +3,7 @@ use ai_wargame::{Game, DEFAULT_BOARD_DIM, Coord};
 fn main() {
     let dim = DEFAULT_BOARD_DIM;
     // let drop_prob = None;
-    let drop_prob = Some(0.05);
+    let drop_prob = Some(0.005);
     let mut game = Game::new(dim, drop_prob);
     let play_random = std::env::args().len() > 1;
 

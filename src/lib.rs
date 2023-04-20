@@ -7,9 +7,11 @@ pub mod unit_type;
 pub mod player;
 pub mod actions;
 pub mod coord;
+pub mod board_map;
 
 // pub use board::array::Board;
 pub use board::vec::Board;
+// pub use board_map::Board;
 
 type Dim = i8;
 pub use coord::{Coord, CoordPair, CoordTuple};

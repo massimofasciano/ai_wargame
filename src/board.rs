@@ -1,4 +1,4 @@
-use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, BoardCellRefMut};
+use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, BoardCellRefMut, CoordPair, Player};
 
 use duplicate::duplicate_item;
 
@@ -28,36 +28,6 @@ impl<I> Default for T {
         Self::new(DEFAULT_BOARD_DIM)
     }
 }
-
-#[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
-impl<I> std::fmt::Display for T {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let data = self.inner();
-        for c in data.iter() {
-            write!(f,":{}",c)?;
-        }
-        Ok(())
-    }
-}
-
-// #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
-// impl<I> std::ops::Index<Coord> for T {
-//     type Output = BoardCell;
-//     fn index(&self, coord: Coord) -> & Self::Output {
-//         let index = self.to_index(coord);
-//         let data = self.inner();
-//         data.index(index)
-//     }
-// }
-
-// #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
-// impl<I> std::ops::IndexMut<Coord> for T {
-//     fn index_mut(&mut self, coord: Coord) -> &mut Self::Output {
-//         let index = self.to_index(coord);
-//         let data = self.inner_mut();
-//         data.index_mut(index)
-//     }
-// }
 
 #[duplicate_item(I T; [const SIZE: usize] [array::BoardArray<SIZE>]; [] [vec::Board])]
 impl<I> T {
@@ -100,27 +70,6 @@ impl<I> T {
         let data = self.inner_mut();
         data[index] = value;
     }
-    pub fn swap(&mut self, coord0: Coord, coord1: Coord) {
-        let index0 = self.to_index(coord0);
-        let index1 = self.to_index(coord1);
-        let data = self.inner_mut();
-        data.swap(index0,index1);
-    }
-    // pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut BoardCell;2]> {
-    //     let index0 = self.to_index(coord0);
-    //     let index1 = self.to_index(coord1);
-    //     if index0 == index1 || index0 >= self.len() || index1 >= self.len() {
-    //         return None
-    //     }
-    //     let ref_mut_0;
-    //     let ref_mut_1;
-    //     let data = self.inner_mut();
-    //     unsafe {
-    //         ref_mut_0 = &mut *(data.get_unchecked_mut(index0) as *mut _);
-    //         ref_mut_1 = &mut *(data.get_unchecked_mut(index1) as *mut _);
-    //     }
-    //     Some([ref_mut_0, ref_mut_1])
-    // }
     pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[BoardCellRefMut;2]> {
         let index0 = self.to_index(coord0);
         let index1 = self.to_index(coord1);
@@ -136,12 +85,20 @@ impl<I> T {
         }
         Some([ref_mut_0.to_ref_mut(), ref_mut_1.to_ref_mut()])
     }
-    pub fn iter(&self) -> std::slice::Iter<BoardCell> {
+    pub fn iter_units(&self) -> impl Iterator<Item=&BoardCell> {
         let data = self.inner();
-        data.iter()
+        data.iter().filter(|c|c.is_unit())
     }
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<BoardCell> {
-        let data = self.inner_mut();
-        data.iter_mut()
+    pub fn rect(&self) -> CoordPair {
+        CoordPair::new(Coord::new(0,0),Coord::new(self.dim(), self.dim()))
+    }
+    pub fn rect_iter(&self) -> impl Iterator<Item = Coord> {
+        self.rect().rect_iter()
+    }
+    pub fn empty_coords<'a>(&'a self) -> impl Iterator<Item = Coord> + 'a {
+        self.rect_iter().filter(|&c|self.get(c).expect("valid coord").is_empty())
+    }
+    pub fn player_coords<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
+        self.rect_iter().filter(move|&c|!self.get(c).expect("valid coord").is_empty() && self.get(c).expect("valid coord").player().unwrap() == player)
     }
 }

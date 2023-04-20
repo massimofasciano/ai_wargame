@@ -2,7 +2,7 @@ use crate::{Coord, UnitType, BoardCell, Dim, Player, Unit, Board, DisplayFirstLe
 
 use rand::seq::{IteratorRandom, SliceRandom};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Game {
     player: Player,
     board: Board,
@@ -137,7 +137,7 @@ impl Game {
         let p2 = p_all.next().unwrap();
         let mut ai_p1 = false;
         let mut ai_p2 = false;
-        for c in self.board.iter() {
+        for c in self.board.iter_units() {
             if let Some((player,unit)) = c.unit() {
                 if player == &p1 && unit.unit_type == UnitType::AI {
                     ai_p1 = true;
@@ -181,11 +181,14 @@ impl Game {
     pub fn board_rect(&self) -> CoordPair {
         CoordPair::new(Coord::new(0,0),Coord::new(self.dim(), self.dim()))
     }
+    pub fn rect_iter(&self) -> impl Iterator<Item = Coord> {
+        self.board_rect().rect_iter()
+    }
     pub fn empty_coords<'a>(&'a self) -> impl Iterator<Item = Coord> + 'a {
-        self.board_rect().rect_iter().filter(|&c|self[c].is_empty())
+        self.board.empty_coords()
     }
     pub fn player_coords<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
-        self.board_rect().rect_iter().filter(move|&c|!self[c].is_empty() && self[c].player().unwrap() == player)
+        self.board.player_coords(player)
     }
     pub fn random_drop(&mut self) -> DropOutcome {
         use rand::Rng;
@@ -193,7 +196,6 @@ impl Game {
         if self.drop_prob.is_some() && rng.gen::<f32>() < self.drop_prob.unwrap() {
             let unit_type = *[UnitType::Hacker,UnitType::Repair].choose(&mut rng).expect("expect a hacker or repair");
             if let Some(empty_coord) = self.empty_coords().choose(&mut rng) {
-                println!("random drop of type {} at {}!",unit_type,empty_coord);
                 self.set_cell(empty_coord, BoardCell::new_unit(self.player(), unit_type));
                 DropOutcome::Drop {location:empty_coord, unit_type: unit_type}
             } else {
@@ -227,17 +229,18 @@ impl Game {
             }
         }
     }
-    pub fn play_turn_from_action(&mut self, action: Action) -> Result<(Action,ActionOutcome,DropOutcome),()> {
+    pub fn play_turn_from_action(&mut self, action: Action) -> Result<(Player,Action,ActionOutcome,DropOutcome),()> {
         let outcome = self.perform_action(action);
         if let Ok(outcome) = outcome {
             let drop_outcome = self.random_drop();
+            let player = self.player();
             self.next_player();
-            Ok((action,outcome,drop_outcome))
+            Ok((player,action,outcome,drop_outcome))
         } else {
             Err(())
         }
     }
-    pub fn play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<(Action,ActionOutcome,DropOutcome),()> {
+    pub fn play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<(Player,Action,ActionOutcome,DropOutcome),()> {
         if let Ok(action) = self.action_from_coords(from, to) {
             self.play_turn_from_action(action)
         } else {
@@ -245,8 +248,8 @@ impl Game {
         }
     }
     pub fn console_play_turn(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
-        if let Ok((action, outcome,drop_outcome)) = self.play_turn_from_coords(from, to) {
-            println!("# {} {}", self.player(), action);
+        if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_coords(from, to) {
+            println!("# {} {}", player, action);
             if outcome.is_useful_info() {
                 println!("# {}", outcome);
             }
@@ -370,19 +373,12 @@ impl Default for Game {
 impl std::fmt::Display for Game {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f,"{}",self.player().to_first_letter())?;
-        for c in self.board.iter() {
-            write!(f,":{}",c)?;
+        for c in self.rect_iter() {
+            write!(f,":{}",self.get_cell(c).unwrap())?;
         }
         Ok(())
     }
 }
-
-// impl std::ops::Index<Coord> for Game {
-//     type Output = BoardCell;
-//     fn index(&self, coord: Coord) -> & Self::Output {
-//         self.get_cell(coord).expect("expected valid coordinates")
-//     }
-// }
 
 impl std::ops::Index<Coord> for Game {
     type Output = BoardCell;
