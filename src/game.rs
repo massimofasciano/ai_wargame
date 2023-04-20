@@ -1,4 +1,6 @@
-use crate::{Coord, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter, Action, ActionOutcome};
+use crate::{Coord, UnitType, Cell, Dim, Player, Unit, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome};
+
+use rand::seq::{IteratorRandom, SliceRandom};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Game {
@@ -206,47 +208,22 @@ impl Game {
             None
         }
     }
-    pub fn random_drop(&mut self) -> bool {
-        if self.drop_prob.is_none() {
-            return false;
-        }
+    pub fn random_drop(&mut self) -> DropOutcome {
         use rand::Rng;
         let mut rng = rand::thread_rng();
-        if rng.gen::<f32>() < self.drop_prob.unwrap() {
-            use UnitType::*;
-            let unit_types = [Hacker,Repair];
-            let unit_type = unit_types[rng.gen_range(0..unit_types.len())];
-            let dest = Coord::new(rng.gen_range(0..self.dim()),rng.gen_range(0..self.dim()));
-            let mut new = Cell::new_unit(self.player(), unit_type);
-            println!("random drop of type {} at {}!",unit_type,Self::coord_to_string(dest));
-            // let target = &mut self[dest];
-            let target = self.get_cell_mut(dest).unwrap();
-            if target.is_unit() {
-                let (player_source,unit_source) = new.unit_mut().unwrap();
-                let (player_target,unit_target) = target.unit_mut().unwrap();
-                if player_source != player_target {
-                    // it's an opposing unit so we try to damage it (it will damage us back)
-                    unit_source.apply_damage(unit_target);
-                    unit_target.apply_damage(unit_source);
-                    if new.is_dead() {
-                        new = Cell::default();
-                    } 
-                    // self.remove_dead(dest);
-                } else {
-                    // it's our unit so we try to repair it
-                    unit_source.apply_repair(unit_target);
-                }
-                // new.interact(target);
-                println!("random interaction at {}!",Self::coord_to_string(dest));
+        if self.drop_prob.is_some() && rng.gen::<f32>() < self.drop_prob.unwrap() {
+            let unit_type = *[UnitType::Hacker,UnitType::Repair].choose(&mut rng).expect("expect a hacker or repair");
+            let board_rect = CoordPair::new(Coord::new(0,0),Coord::new(self.dim(), self.dim()));
+            if let Some(empty_coord) = board_rect.rect_iter().filter(|&c|self[c].is_empty()).choose(&mut rng) {
+                println!("random drop of type {} at {}!",unit_type,empty_coord);
+                self.set_cell(empty_coord, Cell::new_unit(self.player(), unit_type));
+                DropOutcome::Drop {location:empty_coord, unit_type: unit_type}
+            } else {
+                DropOutcome::NoDrop
             }
-            if target.is_empty() || target.is_dead() {
-                self.set_cell(dest, new);
-                // *target = new;
-                println!("random insertion at {}!",Self::coord_to_string(dest));
-            } 
-            return true;
+        } else {
+            DropOutcome::NoDrop
         }
-        false
     }
     pub fn remove_dead(&mut self, coord: Coord) {
         if let Some(cell) = self.get_cell_mut(coord) {
@@ -258,7 +235,7 @@ impl Game {
         }
     }
     pub fn perform_action(&mut self, action: Action) -> Result<ActionOutcome,()> {
-        let outcome = match action {
+        match action {
             Action::Skip => Ok(ActionOutcome::Skipped),
             Action::Move { from, to } => {
                 self.unit_move(from, to)
@@ -269,12 +246,41 @@ impl Game {
             Action::Attack { from, to } => {
                 self.unit_combat(from, to)
             }
-        };
-        if outcome.is_ok() {
-            self.random_drop();
+        }
+    }
+    pub fn play_turn_from_action(&mut self, action: Action) -> Result<(ActionOutcome,DropOutcome),()> {
+        let outcome = self.perform_action(action);
+        if let Ok(outcome) = outcome {
+            let drop_outcome = self.random_drop();
             self.next_player();
-        };
-        outcome
+            Ok((outcome,drop_outcome))
+        } else {
+            Err(())
+        }
+    }
+    pub fn play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<(ActionOutcome,DropOutcome),()> {
+        if let Ok(action) = self.action_from_coords(from, to) {
+            self.play_turn_from_action(action)
+        } else {
+            Err(())
+        }
+    }
+    pub fn console_play_turn(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
+        if let Ok(action) = self.action_from_coords(from, to) {
+            println!("# {} {}", self.player(), action);
+            if let Ok((outcome,drop_outcome)) = self.play_turn_from_action(action) {
+                println!("# action outcome is {}", outcome);
+                if drop_outcome.has_dropped() {
+                    println!("# {}", drop_outcome);
+                }
+                true
+            } else {
+                println!("*** this should not happen! action was pre-validated. ***");
+                false
+            }
+        } else {
+            false
+        }
     }
     pub fn unit_combat(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,()> {
         if self.in_range(1, from, to) && 
@@ -317,7 +323,7 @@ impl Game {
             Err(())
         }
     }
-    pub fn validate_action(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<Action,()> {
+    pub fn action_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<Action,()> {
         let (from, to) = (from.into(),to.into());
         if self.in_range(1, from, to) && 
             self[from].is_unit() && 

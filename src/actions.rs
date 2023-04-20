@@ -1,4 +1,4 @@
-use crate::{Coord, Health};
+use crate::{Coord, Health, UnitType};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Action {
@@ -40,6 +40,32 @@ impl std::fmt::Display for ActionOutcome {
             Self::Repaired { amount } => format!("repaired {} health points",amount),
             Self::Damaged { to_source, to_target } => 
                 format!("combat damage: to source = {}, to target = {}",to_source,to_target),
+        })
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub enum DropOutcome {
+    #[default]
+    NoDrop,
+    Drop{location:Coord,unit_type:UnitType},
+}
+
+impl DropOutcome {
+    pub fn has_dropped(&self) -> bool {
+        if let Self::Drop { location: _ , unit_type: _ } = self {
+            true
+        } else {
+            false
+        }
+    } 
+}
+
+impl std::fmt::Display for DropOutcome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Self::NoDrop => String::from("no drop"),
+            Self::Drop { location, unit_type } => format!("dropped {} at {}",unit_type,location),
         })
     }
 }

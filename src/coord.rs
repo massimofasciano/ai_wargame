@@ -1,6 +1,8 @@
 use std::ops::{Add, Sub, Neg};
 
-use crate::{Dim, CoordTuple};
+use crate::Dim;
+
+pub type CoordTuple = (Dim,Dim);
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Coord {
@@ -74,3 +76,19 @@ impl Neg for Coord {
         Self::new(-self.row, -self.col)
     }
 }
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct CoordPair {
+    pub from: Coord,
+    pub to: Coord,
+}
+
+impl CoordPair {
+    pub fn new(from: Coord, to: Coord) -> Self {
+        Self {from,to}
+    }
+    pub fn rect_iter(self) -> impl Iterator<Item = Coord> {
+        (self.from.row..self.to.row).flat_map(move|row| (self.from.col..self.to.col).map(move|col| Coord::new(row,col)))
+    }
+}
+

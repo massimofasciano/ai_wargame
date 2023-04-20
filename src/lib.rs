@@ -12,15 +12,13 @@ pub mod coord;
 pub use board::vec::Board;
 
 type Dim = i8;
-type CoordTuple = (Dim,Dim);
-// type Coord = CoordTuple;
-pub use coord::Coord;
+pub use coord::{Coord, CoordPair, CoordTuple};
 type Health = u8;
 pub use game::Game;
 pub use cell::Cell;
 pub use unit_type::UnitType;
 pub use player::Player;
-pub use actions::{Action, ActionOutcome};
+pub use actions::{Action, ActionOutcome, DropOutcome};
 
 const MAX_HEALTH : Health = 9;
 pub const DEFAULT_BOARD_DIM : Dim = 10;

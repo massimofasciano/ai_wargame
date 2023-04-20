@@ -29,25 +29,15 @@ fn main() {
                 let md = game.dim();
                 let from = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
                 let to = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
-                if let Ok(action) = game.validate_action(from, to) {
-                    println!("# {} {}", game.player(), action);
-                    println!("# action outcome is {}",game.perform_action(action).expect("action should have been pre-validated"));
-                } else {
-                    // println!("Invalid move!");
-                    continue;
+                if game.console_play_turn(from, to) {
+                    break;
                 }
-                break;
             }
 
         } else {
 
             if let Some((from,to)) = game.parse_move_stdin() {
-                if let Ok(action) = game.validate_action(from, to) {
-                    println!("# {} {}", game.player(), action);
-                    println!("# action outcome is {}",game.perform_action(action).expect("action should have been pre-validated"));
-                } else {
-                    println!("Invalid move!");
-                }
+                game.console_play_turn(from, to);
             } else {
                 println!("Invalid input!");
             }
