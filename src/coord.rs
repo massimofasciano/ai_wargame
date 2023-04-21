@@ -109,7 +109,21 @@ impl CoordPair {
         Self {from,to}
     }
     pub fn rect_iter(self) -> impl Iterator<Item = Coord> {
-        (self.from.row..=self.to.row).flat_map(move|row| (self.from.col..=self.to.col).map(move|col| Coord::new(row,col)))
+        self.row_iter().flat_map(move|row| self.col_iter().map(move|col| Coord::new(row,col)))
+    }
+    pub fn row_iter(self) -> Box<dyn Iterator<Item = Dim>> {
+        if self.from.row > self.to.row {
+            Box::new((self.to.row..=self.from.row).rev())
+        } else {
+            Box::new(self.from.row..=self.to.row)
+        }
+    }
+    pub fn col_iter(self) -> Box<dyn Iterator<Item = Dim>> {
+        if self.from.col > self.to.col {
+            Box::new((self.to.col..=self.from.col).rev())
+        } else {
+            Box::new(self.from.col..=self.to.col)
+        }
     }
 }
 
