@@ -1,4 +1,4 @@
-use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, BoardCellRefMut, CoordPair, Player};
+use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, CoordPair, Player, BoardCellData};
 
 use duplicate::duplicate_item;
 
@@ -56,11 +56,11 @@ impl<I> T {
             None
         }
     }
-    pub fn get_mut(&mut self, coord: Coord) -> Option<BoardCellRefMut> {
+    pub fn get_data_mut(&mut self, coord: Coord) -> Option<&mut BoardCellData> {
         let index = self.to_index(coord);
         let data = self.inner_mut();
         if let Some(data_mut) = data.get_mut(index) {
-            Some(data_mut.to_ref_mut())
+            data_mut.data_mut()
         } else {
             None
         }
@@ -70,7 +70,22 @@ impl<I> T {
         let data = self.inner_mut();
         data[index] = value;
     }
-    pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[BoardCellRefMut;2]> {
+    // pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[BoardCellRefMut;2]> {
+    //     let index0 = self.to_index(coord0);
+    //     let index1 = self.to_index(coord1);
+    //     if index0 == index1 || index0 >= self.len() || index1 >= self.len() {
+    //         return None
+    //     }
+    //     let ref_mut_0 : &mut BoardCell;
+    //     let ref_mut_1 : &mut BoardCell;
+    //     let data = self.inner_mut();
+    //     unsafe {
+    //         ref_mut_0 = &mut *(data.get_unchecked_mut(index0) as *mut _);
+    //         ref_mut_1 = &mut *(data.get_unchecked_mut(index1) as *mut _);
+    //     }
+    //     Some([ref_mut_0.to_ref_mut(), ref_mut_1.to_ref_mut()])
+    // }
+    pub fn get_two_data_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut BoardCellData;2]> {
         let index0 = self.to_index(coord0);
         let index1 = self.to_index(coord1);
         if index0 == index1 || index0 >= self.len() || index1 >= self.len() {
@@ -83,7 +98,11 @@ impl<I> T {
             ref_mut_0 = &mut *(data.get_unchecked_mut(index0) as *mut _);
             ref_mut_1 = &mut *(data.get_unchecked_mut(index1) as *mut _);
         }
-        Some([ref_mut_0.to_ref_mut(), ref_mut_1.to_ref_mut()])
+        if ref_mut_0.is_empty() || ref_mut_1.is_empty() {
+            None
+        } else {
+            Some([ref_mut_0.data_mut().unwrap(), ref_mut_1.data_mut().unwrap()])
+        }
     }
     pub fn iter_units(&self) -> impl Iterator<Item=&BoardCell> {
         let data = self.inner();

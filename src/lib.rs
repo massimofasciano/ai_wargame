@@ -17,7 +17,7 @@ type Dim = i8;
 pub use coord::{Coord, CoordPair, CoordTuple};
 type Health = u8;
 pub use game::Game;
-pub use cell::{BoardCell,BoardCellRefMut};
+pub use cell::{BoardCell,BoardCellData};
 pub use unit_type::UnitType;
 pub use player::Player;
 pub use actions::{Action, ActionOutcome, DropOutcome, IsUsefulInfo};

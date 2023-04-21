@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Unit, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellRefMut};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData};
 
 use rand::seq::{IteratorRandom, SliceRandom};
 
@@ -21,28 +21,23 @@ impl Game {
             drop_prob,
         };
         let md = dim-1;
-        let ai = Unit::new(UnitType::AI);
-        let hacker = Unit::new(UnitType::Hacker);
-        let repair = Unit::new(UnitType::Repair);
-        let tank = Unit::new(UnitType::Tank);
-        let soldier = Unit::new(UnitType::Soldier);
-        let drone = Unit::new(UnitType::Drone);
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
+        use UnitType::*;
         let init = vec![
-            (0,1,&repair), (0,md-1,&hacker),
-            (1,1,&soldier), (1,md-1,&drone),
-            (0,3,&hacker), (0,md-3,&repair),
-            (1,3,&drone), (1,md-3,&soldier),
-            (0,2,&ai), (0,md-2,&ai),
-            (1,2,&tank), (1,md-2,&tank),
+            (0,1,Repair), (0,md-1,Hacker),
+            (1,1,Soldier), (1,md-1,Drone),
+            (0,3,Hacker), (0,md-3,Repair),
+            (1,3,Drone), (1,md-3,Soldier),
+            (0,2,AI), (0,md-2,AI),
+            (1,2,Tank), (1,md-2,Tank),
         ];
         assert_eq!(Player::cardinality(),2);
         let mut p_all = Player::all();
         let p1 = p_all.next().unwrap();
         let p2 = p_all.next().unwrap();
-        for (row,col,unit) in init {
-            game.set_cell((row,col),BoardCell::Unit{player: p2, unit: unit.clone()});
-            game.set_cell((md-row,col),BoardCell::Unit{player: p1, unit: unit.clone()});
+        for (row,col,unit_type) in init {
+            game.set_cell((row,col),BoardCell::new_unit(p2, unit_type));
+            game.set_cell((md-row,col),BoardCell::new_unit(p1, unit_type));
         }
         game.drop_prob = drop_prob;
         game
@@ -64,9 +59,9 @@ impl Game {
             None
         }
     }
-    pub fn get_cell_mut(&mut self, coord: Coord) -> Option<BoardCellRefMut> {
+    pub fn get_cell_data_mut(&mut self, coord: Coord) -> Option<&mut BoardCellData> {
         if self.is_valid_position(coord) {
-            self.board.get_mut(coord)
+            self.board.get_data_mut(coord)
         } else {
             None
         }
@@ -77,12 +72,12 @@ impl Game {
             self.board.set(coord,value);
         }
     }
-    pub fn get_two_cells_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[BoardCellRefMut;2]> {
+    pub fn get_two_cell_data_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut BoardCellData;2]> {
         if self.is_valid_position(coord0) &&
             self.is_valid_position(coord1) &&
             coord0 != coord1
         {
-            self.board.get_two_mut(coord0, coord1)
+            self.board.get_two_data_mut(coord0, coord1)
         } else {
             None
         }
@@ -266,9 +261,9 @@ impl Game {
             self[from].is_unit() && 
             self[to].is_unit() 
         {
-            let [source, target] = self.get_two_cells_mut(from, to).unwrap();
-            let (player_source,unit_source) = source.try_into_inner().expect("not empty").unit_mut().unwrap();
-            let (player_target,unit_target) = target.try_into_inner().expect("not empty").unit_mut().unwrap();
+            let [source, target] = self.get_two_cell_data_mut(from, to).unwrap();
+            let (player_source,unit_source) = source.unit_mut().unwrap();
+            let (player_target,unit_target) = target.unit_mut().unwrap();
             if player_source != player_target {
                 // it's an opposing unit so we try to damage it (it will damage us back)
                 let damage_to_target = unit_source.apply_damage(unit_target);
@@ -288,9 +283,9 @@ impl Game {
             self[from].is_unit() && 
             self[to].is_unit() 
         {
-            let [source, target] = self.get_two_cells_mut(from, to).unwrap();
-            let (player_source,unit_source) = source.try_into_inner().expect("not empty").unit_mut().unwrap();
-            let (player_target,unit_target) = target.try_into_inner().expect("not empty").unit_mut().unwrap();
+            let [source, target] = self.get_two_cell_data_mut(from, to).unwrap();
+            let (player_source,unit_source) = source.unit_mut().unwrap();
+            let (player_target,unit_target) = target.unit_mut().unwrap();
             if player_source == player_target {
                 // it's a friendly unit so we can try to repair it
                 let repair_amount = unit_source.apply_repair(unit_target);
@@ -317,9 +312,9 @@ impl Game {
                 Ok(Action::Move { from, to })
             } else if self[to].is_unit() {
                 // destination is a unit
-                let [source, target] = self.get_two_cells_mut(from, to).unwrap();
-                let (player_source,unit_source) = source.try_into_inner().expect("not empty").unit_mut().unwrap();
-                let (player_target,unit_target) = target.try_into_inner().expect("not empty").unit_mut().unwrap();
+                let [source, target] = self.get_two_cell_data_mut(from, to).unwrap();
+                let (player_source,unit_source) = source.unit_mut().unwrap();
+                let (player_target,unit_target) = target.unit_mut().unwrap();
                 if player_source != player_target {
                     // it's an opposing unit so we try to damage it (it will damage us back)
                     if unit_source.can_damage(unit_target) {
