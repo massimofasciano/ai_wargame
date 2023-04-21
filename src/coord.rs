@@ -14,9 +14,18 @@ impl Coord {
     pub const fn new(row: Dim, col: Dim) -> Self {
         Self {row,col}
     }
-    pub const fn new_from_tuple(coord: CoordTuple) -> Self {
+    pub const fn from_tuple(coord: CoordTuple) -> Self {
         let (row,col) = coord;
         Self {row,col}
+    }
+    pub const fn from_dim_diag(dim: Dim) -> Self {
+        Self::new(dim, dim)
+    }
+    pub const fn from_dim_horiz(dim: Dim) -> Self {
+        Self::new(0, dim)
+    }
+    pub const fn from_dim_vert(dim: Dim) -> Self {
+        Self::new(dim, 0)
     }
     pub fn try_to_string_as_letter_number(&self) -> Result<String,()> {
         let (row,col) = (self.row,self.col);
@@ -42,6 +51,10 @@ impl Coord {
     pub const fn to_tuple(&self) -> CoordTuple {
         (self.row,self.col)
     }
+    pub fn rect_around(&self, range: Dim) -> CoordPair {
+        let diag = Coord::from_dim_diag(range);
+        CoordPair::new(*self-diag,*self+diag)
+    }
 }
 
 impl std::fmt::Display for Coord {
@@ -52,7 +65,7 @@ impl std::fmt::Display for Coord {
 
 impl From<CoordTuple> for Coord {
     fn from(coord: CoordTuple) -> Self {
-        Self::new_from_tuple(coord)
+        Self::from_tuple(coord)
     }
 }
 

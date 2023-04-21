@@ -297,7 +297,7 @@ impl Game {
             Err(())
         }
     }
-    pub fn action_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<Action,()> {
+    pub fn action_from_coords(&self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<Action,()> {
         let (from, to) = (from.into(),to.into());
         if self.in_range(1, from, to) && 
             self[from].is_unit() && 
@@ -312,9 +312,8 @@ impl Game {
                 Ok(Action::Move { from, to })
             } else if self[to].is_unit() {
                 // destination is a unit
-                let [source, target] = self.get_two_cell_data_mut(from, to).unwrap();
-                let (player_source,unit_source) = source.unit_mut().unwrap();
-                let (player_target,unit_target) = target.unit_mut().unwrap();
+                let (player_source,unit_source) = self[from].unit().unwrap();
+                let (player_target,unit_target) = self[to].unit().unwrap();
                 if player_source != player_target {
                     // it's an opposing unit so we try to damage it (it will damage us back)
                     if unit_source.can_damage(unit_target) {
@@ -353,9 +352,9 @@ impl Game {
             println!();
         }
     }
-    pub fn coord_to_string(coord : Coord) -> String {
-        let (row,col) = coord.to_tuple();
-        format!("{}{}",(row as u8 +'A' as u8) as char, col)
+    pub fn possible_actions_from_coord<'a>(&'a self, source : Coord) -> impl Iterator<Item=Action> + 'a {
+        let rect_iter = source.rect_around(1).rect_iter();
+        rect_iter.filter_map(move|target|self.action_from_coords(source, target).ok())
     }
 }
 

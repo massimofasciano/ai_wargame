@@ -21,6 +21,13 @@ fn main() {
             break;
         }
 
+        for coord in game.player_coords(game.player()) {
+            println!("% Possible actions for {} :",coord);
+            for action in game.possible_actions_from_coord(coord) {
+                println!("% - {}",action);
+            }
+        }
+
         if play_random {
 
             loop {

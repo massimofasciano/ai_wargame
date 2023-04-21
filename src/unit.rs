@@ -18,7 +18,7 @@ impl Unit {
         assert!(health <= MAX_HEALTH);
         Self { unit_type, health }
     }
-    pub fn can_repair(&mut self, target: &mut Self) -> bool {
+    pub fn can_repair(&self, target: &Self) -> bool {
         assert!(target.health <= MAX_HEALTH);
         let repair = self.unit_type.repair_amount(&target.unit_type);
         repair != 0 && target.health != MAX_HEALTH
@@ -33,7 +33,7 @@ impl Unit {
         }
         repair
     }
-    pub fn can_damage(&mut self, target: &mut Self) -> bool {
+    pub fn can_damage(&self, target: &Self) -> bool {
         assert!(target.health <= MAX_HEALTH);
         let damage = self.unit_type.damage_amount(&target.unit_type);
         damage != 0
