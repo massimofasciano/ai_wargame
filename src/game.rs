@@ -179,7 +179,7 @@ impl Game {
         }
     }
     pub fn board_rect(&self) -> CoordPair {
-        CoordPair::new(Coord::new(0,0),Coord::new(self.dim(), self.dim()))
+        CoordPair::from_dim(self.dim())
     }
     pub fn rect_iter(&self) -> impl Iterator<Item = Coord> {
         self.board_rect().rect_iter()

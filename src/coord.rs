@@ -98,11 +98,18 @@ pub struct CoordPair {
 }
 
 impl CoordPair {
-    pub fn new(from: Coord, to: Coord) -> Self {
+    pub fn new(from: impl Into<Coord>, to: impl Into<Coord>) -> Self {
+        let from = from.into();
+        let to = to.into();
+        Self {from,to}
+    }
+    pub fn from_dim(dim: Dim) -> Self {
+        let from = Coord::new(0, 0);
+        let to = Coord::new(dim-1,dim-1);
         Self {from,to}
     }
     pub fn rect_iter(self) -> impl Iterator<Item = Coord> {
-        (self.from.row..self.to.row).flat_map(move|row| (self.from.col..self.to.col).map(move|col| Coord::new(row,col)))
+        (self.from.row..=self.to.row).flat_map(move|row| (self.from.col..=self.to.col).map(move|col| Coord::new(row,col)))
     }
 }
 
