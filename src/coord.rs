@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub, Neg};
+use std::ops::{Add, Sub, Neg, AddAssign, SubAssign};
 
 use crate::Dim;
 
@@ -74,6 +74,20 @@ impl Neg for Coord {
     type Output = Coord;
     fn neg(self) -> Self::Output {
         Self::new(-self.row, -self.col)
+    }
+}
+
+impl AddAssign for Coord {
+    fn add_assign(&mut self, rhs: Self) {
+        self.row += rhs.row;
+        self.col += rhs.col;
+    }
+}
+
+impl SubAssign for Coord {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.row -= rhs.row;
+        self.col -= rhs.col;
     }
 }
 
