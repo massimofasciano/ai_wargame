@@ -386,12 +386,21 @@ impl Game {
         }
     }
     pub fn heuristic(&self) -> HeuristicScore {
-        let heuristic = if self.player().is_attacker() {
-            self.attacker_heuristic
-        } else {
-            self.defender_heuristic
-        };
-        heuristic(self)
+        let current_player = self.player();
+        let result = self.check_if_winner();
+        match result {
+            Some(Some(winner)) if winner == current_player => HeuristicScore::MAX, // win
+            Some(Some(_)) => HeuristicScore::MIN, // lose
+            Some(None) => 0, // draw
+            None => { // not finished so call appropriate heuristic
+                let heuristic = if self.player().is_attacker() {
+                    self.attacker_heuristic
+                } else {
+                    self.defender_heuristic
+                };
+                heuristic(self)
+            }
+        }
     }
     pub fn suggest_action_rec(&self, depth: usize) -> (Option<HeuristicScore>, Option<Action>) {
         if depth == 0 || self.check_if_winner().is_some() {

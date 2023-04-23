@@ -1,11 +1,11 @@
-use ai_wargame::{Game, DEFAULT_BOARD_DIM, units_heuristic, units_health_heuristic};
+use ai_wargame::{Game, DEFAULT_BOARD_DIM, units_health_heuristic, units_score_distance_center};
 
 fn main() {
     let dim = DEFAULT_BOARD_DIM;
     let drop_prob = None;
     // let drop_prob = Some(0.005);
     let max_depth = 4;
-    let attacker_heuristic = units_heuristic;
+    let attacker_heuristic = units_score_distance_center;
     let defender_heuristic = units_health_heuristic;
     let mut game = Game::new(dim,attacker_heuristic,defender_heuristic,drop_prob,max_depth);
     let play_alone = std::env::args().len() > 1;

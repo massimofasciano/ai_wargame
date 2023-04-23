@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "ai_wargame"
-version = "0.5.4"
+version = "0.5.5"
 dependencies = [
  "anyhow",
  "derive_more",

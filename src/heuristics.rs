@@ -3,41 +3,30 @@ use crate::{Game, BoardCell, Player, Unit, UnitType};
 pub type HeuristicScore = i32;
 pub type Heuristic = fn(&Game)->HeuristicScore;
 
-pub fn win_heuristic(game: &Game) -> HeuristicScore {
-    let current_player = game.player();
-    let result = game.check_if_winner();
-    match result {
-        Some(Some(winner)) if winner == current_player => HeuristicScore::MAX, // win
-        Some(Some(_)) => HeuristicScore::MIN, // lose
-        Some(None) => 0, // draw
-        None => 0, // not finished
-    }
+pub fn win_heuristic(_game: &Game) -> HeuristicScore {
+    0
 }
 
 pub fn units_heuristic(game: &Game) -> HeuristicScore {
     let current_player = game.player();
-    let result = game.check_if_winner();
-    match result {
-        Some(Some(winner)) if winner == current_player => HeuristicScore::MAX, // win
-        Some(Some(_)) => HeuristicScore::MIN, // lose
-        Some(None) => 0, // draw
-        None => { // not finished
-            game.units().map(|cell|cell_unit_type(cell,&current_player)).sum()
-        }
-    }
+    game.units().map(|cell|cell_unit_type(cell,&current_player)).sum()
 }
 
 pub fn units_health_heuristic(game: &Game) -> HeuristicScore {
     let current_player = game.player();
-    let result = game.check_if_winner();
-    match result {
-        Some(Some(winner)) if winner == current_player => HeuristicScore::MAX, // win
-        Some(Some(_)) => HeuristicScore::MIN, // lose
-        Some(None) => 0, // draw
-        None => { // not finished
-            game.units().map(|cell|cell_unit_type_health(cell,&current_player)).sum()
-        }
-    }
+    game.units().map(|cell|cell_unit_type_health(cell,&current_player)).sum()
+}
+
+pub fn units_distance_from_center_row(game: &Game) -> HeuristicScore {
+    let current_player = game.player();
+    let player_coords = game.player_unit_coords(current_player);
+    player_coords.map(|coord|{
+        (game.dim()/2-coord.row-1) as HeuristicScore
+    }).sum()
+}
+
+pub fn units_score_distance_center(game: &Game) -> HeuristicScore {
+    units_distance_from_center_row(game)+units_health_heuristic(game)
 }
 
 fn cell_unit_type_health(cell: &BoardCell, current_player: &Player) -> HeuristicScore {
