@@ -1,4 +1,5 @@
 use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, win_heuristic, DEFAULT_MAX_DEPTH};
+use anyhow::anyhow;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
 
 #[derive(Debug, Clone)]
@@ -124,13 +125,13 @@ impl Game {
         (coord1.row - coord0.row).abs() as u8 <= range && 
         (coord1.col - coord0.col).abs() as u8 <= range
     }
-    pub fn unit_move(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,()> {
+    pub fn unit_move(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,anyhow::Error> {
         if self.is_valid_move(from, to) {
             let removed = self.remove_cell(from).unwrap();
             self.set_cell(to,removed);
             Ok(ActionOutcome::Moved { delta: to-from })
         } else {
-            Err(())
+            Err(anyhow!("not a valid move"))
         }
     }
     pub fn check_if_winner(&self) -> Option<Option<Player>>{
@@ -217,7 +218,7 @@ impl Game {
             }
         }
     }
-    pub fn perform_action(&mut self, action: Action) -> Result<ActionOutcome,()> {
+    pub fn perform_action(&mut self, action: Action) -> Result<ActionOutcome,anyhow::Error> {
         match action {
             Action::Pass => Ok(ActionOutcome::Passed),
             Action::Move { from, to } => {
@@ -231,7 +232,7 @@ impl Game {
             }
         }
     }
-    pub fn play_turn_from_action(&mut self, action: Action) -> Result<(Player,Action,ActionOutcome,DropOutcome),()> {
+    pub fn play_turn_from_action(&mut self, action: Action) -> Result<(Player,Action,ActionOutcome,DropOutcome),anyhow::Error> {
         let outcome = self.perform_action(action);
         if let Ok(outcome) = outcome {
             let drop_outcome = self.random_drop();
@@ -239,14 +240,14 @@ impl Game {
             self.next_player();
             Ok((player,action,outcome,drop_outcome))
         } else {
-            Err(())
+            Err(anyhow!("invalid action"))
         }
     }
-    pub fn play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<(Player,Action,ActionOutcome,DropOutcome),()> {
+    pub fn play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<(Player,Action,ActionOutcome,DropOutcome),anyhow::Error> {
         if let Ok(action) = self.action_from_coords(from, to) {
             self.play_turn_from_action(action)
         } else {
-            Err(())
+            Err(anyhow!("invalid coordinates or move"))
         }
     }
     pub fn console_play_turn(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
@@ -263,7 +264,7 @@ impl Game {
             false
         }
     }
-    pub fn unit_combat(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,()> {
+    pub fn unit_combat(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,anyhow::Error> {
         if self.in_range(1, from, to) && 
             self[from].is_unit() && 
             self[to].is_unit() 
@@ -279,13 +280,13 @@ impl Game {
                 self.remove_dead(to);
                 Ok(ActionOutcome::Damaged { to_source: damage_to_source, to_target: damage_to_target })
             } else {
-                Err(())
+                Err(anyhow!("can't attack friendly units"))
             }
         } else {
-            Err(())
+            Err(anyhow!("out of range or invalid coordinates"))
         }
     }
-    pub fn unit_repair(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,()> {
+    pub fn unit_repair(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,anyhow::Error> {
         if self.in_range(1, from, to) && 
             self[from].is_unit() && 
             self[to].is_unit() 
@@ -298,13 +299,13 @@ impl Game {
                 let repair_amount = unit_source.apply_repair(unit_target);
                 Ok(ActionOutcome::Repaired { amount: repair_amount })
             } else {
-                Err(())
+                Err(anyhow!("can only repair friendly units"))
             }
         } else {
-            Err(())
+            Err(anyhow!("out of range or invalid coordinates"))
         }
     }
-    pub fn action_from_coords(&self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<Action,()> {
+    pub fn action_from_coords(&self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<Action,anyhow::Error> {
         let (from, to) = (from.into(),to.into());
         if self.in_range(1, from, to) && 
             self[from].is_unit() && 
@@ -326,21 +327,21 @@ impl Game {
                     if unit_source.can_damage(unit_target) {
                         Ok(Action::Attack { from, to })
                     } else {
-                        Err(())
+                        Err(anyhow!("can't damage unit"))
                     }
                 } else {
                     // it's our unit so we try to repair it (if repair not possible then action is not valid)
                     if unit_source.can_repair(unit_target) {
                         Ok(Action::Repair { from, to })
                     } else {
-                        Err(())
+                        Err(anyhow!("can't repair unit"))
                     }
                 }
             } else {
-                Err(())
+                Err(anyhow!("invalid target coordinate"))
             }
         } else {
-            Err(())
+            Err(anyhow!("not in range or source is not friendly unit"))
         }
     }
     pub fn pretty_print(&self) {
