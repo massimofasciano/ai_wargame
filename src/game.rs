@@ -3,19 +3,26 @@ use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
 
 #[derive(Debug, Clone)]
 pub struct Game {
-    player: Player,
-    board: Board,
+    state: GameState,
     dim: Dim,
     total_moves: usize,
     drop_prob: Option<f32>,
     max_depth: usize,
 }
 
+#[derive(Debug, Clone)]
+pub struct GameState {
+    player: Player,
+    board: Board,
+}
+
 impl Game {
     pub fn new(dim: Dim, drop_prob: Option<f32>, max_depth: usize) -> Self {
         let mut game = Self {
-            player: Player::default(),
-            board: Board::new(dim),
+            state: GameState {
+                player: Player::default(),
+                board: Board::new(dim),
+            },
             dim,
             total_moves : 0,
             drop_prob,
@@ -48,21 +55,21 @@ impl Game {
     }
     pub fn remove_cell(&mut self, coord: Coord) -> Option<BoardCell> {
         if self.is_valid_position(coord) {
-            self.board.remove(coord)
+            self.state.board.remove(coord)
         } else {
             None
         }
     }
     pub fn get_cell(&self, coord: Coord) -> Option<&BoardCell> {
         if self.is_valid_position(coord) {
-            Some(self.board.get(coord).unwrap())
+            Some(self.state.board.get(coord).unwrap())
         } else {
             None
         }
     }
     pub fn get_cell_data_mut(&mut self, coord: Coord) -> Option<&mut BoardCellData> {
         if self.is_valid_position(coord) {
-            self.board.get_data_mut(coord)
+            self.state.board.get_data_mut(coord)
         } else {
             None
         }
@@ -70,7 +77,7 @@ impl Game {
     pub fn set_cell(&mut self, coord: impl Into<Coord>, value: BoardCell) {
         let coord = coord.into();
         if self.is_valid_position(coord) {
-            self.board.set(coord,value);
+            self.state.board.set(coord,value);
         }
     }
     pub fn get_two_cell_data_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut BoardCellData;2]> {
@@ -78,21 +85,21 @@ impl Game {
             self.is_valid_position(coord1) &&
             coord0 != coord1
         {
-            self.board.get_two_data_mut(coord0, coord1)
+            self.state.board.get_two_data_mut(coord0, coord1)
         } else {
             None
         }
     }
     pub fn player(&self) -> Player {
-        self.player
+        self.state.player
     }
     pub fn total_moves(&self) -> usize {
         self.total_moves
     }
     pub fn next_player(&mut self) -> Player {
-        self.player = self.player.next();
+        self.state.player = self.state.player.next();
         self.total_moves += 1;
-        self.player
+        self.state.player
     }
     pub fn is_valid_position(&self, coord : Coord) -> bool {
         let (row,col) = coord.to_tuple();
@@ -133,7 +140,7 @@ impl Game {
         let p2 = p_all.next().unwrap();
         let mut ai_p1 = false;
         let mut ai_p2 = false;
-        for c in self.board.iter_units() {
+        for c in self.state.board.iter_units() {
             if let Some((player,unit)) = c.unit() {
                 if player == &p1 && unit.unit_type == UnitType::AI {
                     ai_p1 = true;
@@ -181,10 +188,10 @@ impl Game {
         self.board_rect().rect_iter()
     }
     pub fn empty_coords<'a>(&'a self) -> impl Iterator<Item = Coord> + 'a {
-        self.board.empty_coords()
+        self.state.board.empty_coords()
     }
     pub fn player_coords<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
-        self.board.player_coords(player)
+        self.state.board.player_coords(player)
     }
     pub fn random_drop(&mut self) -> DropOutcome {
         let mut rng = rand::thread_rng();
@@ -357,7 +364,7 @@ impl Game {
         rect_iter.filter_map(move|target|self.action_from_coords(source, target).ok())
     }
     pub fn player_units<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
-        self.board.iter_player_unit_coords(player)
+        self.state.board.iter_player_unit_coords(player)
     }
     pub fn suggest_action(&self) -> Action {
         let suggestion = self.suggest_action_rec(self.max_depth).1;
