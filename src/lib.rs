@@ -7,17 +7,13 @@ pub mod unit_type;
 pub mod player;
 pub mod actions;
 pub mod coord;
-pub mod board_map;
 pub mod heuristics;
-
-// pub use board::array::Board;
-// pub use board::vec::Board;
-pub use board_map::Board;
 
 type Dim = i8;
 pub use coord::{Coord, CoordPair, CoordTuple};
 type Health = u8;
 pub use game::Game;
+pub use board::Board;
 pub use cell::{BoardCell,BoardCellData};
 pub use unit_type::UnitType;
 pub use player::Player;
