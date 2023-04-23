@@ -18,10 +18,10 @@ pub use cell::{BoardCell,BoardCellData};
 pub use unit_type::UnitType;
 pub use player::Player;
 pub use actions::{Action, ActionOutcome, DropOutcome, IsUsefulInfo};
-pub use heuristics::{Heuristic,HeuristicScore,win_heuristic,units_heuristic};
+pub use heuristics::{Heuristic,HeuristicScore,win_heuristic,units_heuristic,units_health_heuristic};
 
 const MAX_HEALTH : Health = 9;
-pub const DEFAULT_BOARD_DIM : Dim = 10;
+pub const DEFAULT_BOARD_DIM : Dim = 8;
 const DEFAULT_BOARD_SIZE : usize = DEFAULT_BOARD_DIM as usize * DEFAULT_BOARD_DIM as usize;
 pub const DEFAULT_MAX_DEPTH : usize = 3;
 pub const DEFAULT_HEURISTIC : Heuristic = win_heuristic;

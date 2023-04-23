@@ -1,4 +1,4 @@
-use crate::{UnitType, Player, Unit, DisplayFirstLetter, HeuristicScore};
+use crate::{UnitType, Player, Unit, DisplayFirstLetter};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(transparent)]
@@ -53,12 +53,6 @@ impl BoardCell {
         match self.data {
             Some(BoardCellData::Unit { player: _, unit: _ }) => true,
             _ => false,
-        }
-    }
-    pub fn score(&self) -> HeuristicScore {
-        match self.data {
-            Some(BoardCellData::Unit { player: _, unit }) => unit.score(),
-            _ => 0,
         }
     }
     pub fn player(&self) -> Option<Player> {

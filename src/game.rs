@@ -374,6 +374,9 @@ impl Game {
     pub fn player_units<'a>(&'a self, player: Player) -> impl Iterator<Item = &BoardCell> + 'a {
         self.state.board.iter_player_units(player)
     }
+    pub fn units<'a>(&'a self) -> impl Iterator<Item = &BoardCell> + 'a {
+        self.state.board.iter_units()
+    }
     pub fn suggest_action(&self) -> Action {
         let suggestion = self.suggest_action_rec(self.max_depth).1;
         if suggestion.is_some() {

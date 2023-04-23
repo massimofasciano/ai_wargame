@@ -1,4 +1,4 @@
-use crate::{DisplayFirstLetter, Health, HeuristicScore};
+use crate::{DisplayFirstLetter, Health};
 
 #[derive(Debug, PartialEq, PartialOrd,Default, Clone, Copy)]
 #[derive(derive_more::Display)]
@@ -24,17 +24,6 @@ impl UnitType {
             Tank => 8,
             Drone => 6,
             Soldier => 4,
-        }
-    }
-    pub fn score(&self) -> HeuristicScore {
-        use UnitType::*;
-        match self {
-            AI => 30,
-            Hacker => 10,
-            Repair => 20,
-            Tank => 10,
-            Drone => 10,
-            Soldier => 10,
         }
     }
     pub fn damage_amount(&self, target: &Self) -> Health {
