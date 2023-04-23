@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, win_heuristic, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic};
 use anyhow::anyhow;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
 
@@ -9,7 +9,8 @@ pub struct Game {
     total_moves: usize,
     drop_prob: Option<f32>,
     max_depth: usize,
-    heuristic: Heuristic,
+    attacker_heuristic: Heuristic,
+    defender_heuristic: Heuristic,
 }
 
 #[derive(Debug, Clone)]
@@ -19,7 +20,7 @@ pub struct GameState {
 }
 
 impl Game {
-    pub fn new(dim: Dim, heuristic: Heuristic, drop_prob: Option<f32>, max_depth: usize) -> Self {
+    pub fn new(dim: Dim, attacker_heuristic: Heuristic, defender_heuristic: Heuristic, drop_prob: Option<f32>, max_depth: usize) -> Self {
         let mut game = Self {
             state: GameState {
                 player: Player::default(),
@@ -29,7 +30,8 @@ impl Game {
             total_moves : 0,
             drop_prob,
             max_depth,
-            heuristic,
+            attacker_heuristic,
+            defender_heuristic,
         };
         let md = dim-1;
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
@@ -381,8 +383,12 @@ impl Game {
         }
     }
     pub fn heuristic(&self) -> HeuristicScore {
-        let h = self.heuristic;
-        h(self)
+        let heuristic = if self.player().is_attacker() {
+            self.attacker_heuristic
+        } else {
+            self.defender_heuristic
+        };
+        heuristic(self)
     }
     pub fn suggest_action_rec(&self, depth: usize) -> (Option<HeuristicScore>, Option<Action>) {
         if depth == 0 || self.check_if_winner().is_some() {
@@ -427,7 +433,7 @@ impl Game {
 
 impl Default for Game {
     fn default() -> Self {
-        Self::new(10, DEFAULT_HEURISTIC, None, DEFAULT_MAX_DEPTH)
+        Self::new(10, DEFAULT_HEURISTIC, DEFAULT_HEURISTIC, None, DEFAULT_MAX_DEPTH)
     }
 }
 

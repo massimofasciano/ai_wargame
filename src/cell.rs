@@ -1,4 +1,4 @@
-use crate::{UnitType, Player, Unit, DisplayFirstLetter, HeuristicScore, heuristics::units_heuristic};
+use crate::{UnitType, Player, Unit, DisplayFirstLetter, HeuristicScore};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(transparent)]
