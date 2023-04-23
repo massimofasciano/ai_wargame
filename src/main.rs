@@ -1,11 +1,13 @@
-use ai_wargame::{Game, DEFAULT_BOARD_DIM, Coord};
+use ai_wargame::{Game, DEFAULT_BOARD_DIM, DEFAULT_MAX_DEPTH};
 
 fn main() {
     let dim = DEFAULT_BOARD_DIM;
     // let drop_prob = None;
+    let max_depth = DEFAULT_MAX_DEPTH;
+    // let max_depth = 4;
     let drop_prob = Some(0.005);
-    let mut game = Game::new(dim, drop_prob);
-    let play_random = std::env::args().len() > 1;
+    let mut game = Game::new(dim, drop_prob,max_depth);
+    let play_alone = std::env::args().len() > 1;
 
     loop {
         println!();
@@ -21,28 +23,32 @@ fn main() {
             break;
         }
 
-        for coord in game.player_coords(game.player()) {
-            println!("% Possible actions for {} :",coord);
-            for action in game.possible_actions_from_coord(coord) {
-                println!("% - {}",action);
-            }
-        }
+        // for coord in game.player_coords(game.player()) {
+        //     println!("% Possible actions for {} :",coord);
+        //     for action in game.possible_actions_from_coord(coord) {
+        //         println!("% - {}",action);
+        //     }
+        // }
 
-        if play_random {
+        if play_alone {
 
-            loop {
-                use rand::Rng;
-                let mut rng = rand::thread_rng();
-                let md = game.dim();
-                let from = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
-                let to = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
-                if game.console_play_turn(from, to) {
-                    break;
-                }
-            }
+            // loop {
+            //     use rand::Rng;
+            //     let mut rng = rand::thread_rng();
+            //     let md = game.dim();
+            //     let from = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
+            //     let to = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
+            //     if game.console_play_turn(from, to) {
+            //         break;
+            //     }
+            // }
+
+            game.computer_play_turn();
 
         } else {
 
+            let suggestion = game.suggest_action();
+            println!("Suggestion: {}",suggestion);
             if let Some((from,to)) = game.parse_move_stdin() {
                 game.console_play_turn(from, to);
             } else {

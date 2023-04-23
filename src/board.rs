@@ -108,6 +108,24 @@ impl<I> T {
         let data = self.inner();
         data.iter().filter(|c|c.is_unit())
     }
+    pub fn iter_unit_coords<'a>(&'a self) -> impl Iterator<Item=Coord> + 'a {
+        self.rect_iter().filter(|coord| {
+            if let Some(cell) = self.get(*coord) {
+                cell.is_unit()
+            } else {
+                false
+            }
+        })
+    }
+    pub fn iter_player_unit_coords<'a>(&'a self, player: Player) -> impl Iterator<Item=Coord> + 'a {
+        self.rect_iter().filter(move|coord| {
+            if let Some(cell) = self.get(*coord) {
+                cell.is_unit() && cell.player().unwrap() == player
+            } else {
+                false
+            }
+        })
+    }
     pub fn rect(&self) -> CoordPair {
         CoordPair::from_dim(self.dim())
     }

@@ -84,26 +84,6 @@ impl Board {
             self.data.insert(coord, value);
         }
     }
-    // pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[BoardCellRefMut;2]> {
-    //     if coord0 == coord1 {
-    //         return None
-    //     }
-    //     let mut ref_mut_0 = BoardCellRefMut::Empty;
-    //     let mut ref_mut_1 = BoardCellRefMut::Empty;
-    //     if let Some(ref_mut) = self.data.get_mut(&coord0) {
-    //         unsafe {
-    //             let ref_mut : &mut BoardCell = &mut *(ref_mut as *mut _);
-    //             ref_mut_0 = ref_mut.to_ref_mut()
-    //         }
-    //     }
-    //     if let Some(ref_mut) = self.data.get_mut(&coord1) {
-    //         unsafe {
-    //             let ref_mut : &mut BoardCell = &mut *(ref_mut as *mut _);
-    //             ref_mut_1 = ref_mut.to_ref_mut()
-    //         }
-    //     }
-    //     Some([ref_mut_0, ref_mut_1])
-    // }
     pub fn get_two_data_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut BoardCellData;2]> {
         if coord0 == coord1 {
             return None;
@@ -128,6 +108,18 @@ impl Board {
     }
     pub fn iter_units(&self) -> std::collections::hash_map::Values<Coord, BoardCell> {
         self.data.values()
+    }
+    pub fn iter_unit_coords<'a>(&'a self) -> impl Iterator<Item=Coord> + 'a {
+        self.data.keys().map(Coord::clone)
+    }
+    pub fn iter_player_unit_coords<'a>(&'a self, player: Player) -> impl Iterator<Item=Coord> + 'a {
+        self.data.iter().filter_map(move|(coord, cell)|{
+            if cell.is_unit() && cell.player().unwrap() == player {
+                Some(coord)
+            } else {
+                None
+            }
+        }).map(Coord::clone)
     }
     pub fn rect(&self) -> CoordPair {
         CoordPair::from_dim(self.dim())

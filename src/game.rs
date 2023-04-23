@@ -1,6 +1,5 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData};
-
-use rand::seq::{IteratorRandom, SliceRandom};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, win_heuristic, DEFAULT_MAX_DEPTH};
+use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
 
 #[derive(Debug, Clone)]
 pub struct Game {
@@ -9,16 +8,18 @@ pub struct Game {
     dim: Dim,
     total_moves: usize,
     drop_prob: Option<f32>,
+    max_depth: usize,
 }
 
 impl Game {
-    pub fn new(dim: Dim, drop_prob: Option<f32>) -> Self {
+    pub fn new(dim: Dim, drop_prob: Option<f32>, max_depth: usize) -> Self {
         let mut game = Self {
             player: Player::default(),
             board: Board::new(dim),
             dim,
             total_moves : 0,
             drop_prob,
+            max_depth,
         };
         let md = dim-1;
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
@@ -186,7 +187,6 @@ impl Game {
         self.board.player_coords(player)
     }
     pub fn random_drop(&mut self) -> DropOutcome {
-        use rand::Rng;
         let mut rng = rand::thread_rng();
         if self.drop_prob.is_some() && rng.gen::<f32>() < self.drop_prob.unwrap() {
             let unit_type = *[UnitType::Hacker,UnitType::Repair].choose(&mut rng).expect("expect a hacker or repair");
@@ -356,11 +356,61 @@ impl Game {
         let rect_iter = source.rect_around(1).rect_iter();
         rect_iter.filter_map(move|target|self.action_from_coords(source, target).ok())
     }
+    pub fn player_units<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
+        self.board.iter_player_unit_coords(player)
+    }
+    pub fn suggest_action(&self) -> Action {
+        let suggestion = self.suggest_action_rec(self.max_depth).1;
+        if suggestion.is_some() {
+            suggestion.unwrap()
+        } else {
+            Action::default()
+        }
+    }
+    pub fn suggest_action_rec(&self, depth: usize) -> (Option<HeuristicScore>, Option<Action>) {
+        if depth == 0 || self.check_if_winner().is_some() {
+            (Some(win_heuristic(self)),None)
+        } else {
+            let mut best_action = None;
+            let mut best_score = None;
+            let possible_actions = self.player_units(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
+            let mut rng = rand::thread_rng();
+            let mut possible_actions = possible_actions.collect::<Vec<_>>();
+            possible_actions.shuffle(&mut rng);
+            for possible_action in possible_actions {
+                let mut possible_game = self.clone();
+                possible_game.play_turn_from_action(possible_action).expect("action should be valid");
+                let (score, _) = possible_game.suggest_action_rec(depth-1);
+                if best_score.is_none() || score.is_some() && score.unwrap() > best_score.unwrap() {
+                    best_score = score;
+                    best_action = Some(possible_action);
+                }
+            }
+            (best_score, best_action)
+        }
+    }
+    pub fn computer_play_turn(&mut self) {
+        if let (_,Some(best_action)) = self.suggest_action_rec(self.max_depth) {
+            if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
+                println!("# {} {}", player, action);
+                if outcome.is_useful_info() {
+                    println!("# {}", outcome);
+                }
+                if drop_outcome.is_useful_info() {
+                    println!("# {}", drop_outcome);
+                }
+            } else {
+                panic!("play turn should work");
+            }
+        } else {
+            panic!("don't know what to do!");
+        }
+    }
 }
 
 impl Default for Game {
     fn default() -> Self {
-        Self::new(10, None)
+        Self::new(10, None, DEFAULT_MAX_DEPTH)
     }
 }
 
