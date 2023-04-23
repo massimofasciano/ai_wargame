@@ -1,4 +1,4 @@
-use crate::{UnitType, Health, MAX_HEALTH};
+use crate::{UnitType, Health, MAX_HEALTH, HeuristicScore};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Unit {
@@ -47,6 +47,10 @@ impl Unit {
             target.health = 0;
         }
         damage
+    }
+    pub fn score(&self) -> HeuristicScore {
+        assert!(self.health <= MAX_HEALTH);
+        self.unit_type.score()+self.health as HeuristicScore
     }
 }
 

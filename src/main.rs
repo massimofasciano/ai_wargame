@@ -1,4 +1,4 @@
-use ai_wargame::{Game, DEFAULT_BOARD_DIM, DEFAULT_MAX_DEPTH};
+use ai_wargame::{Game, DEFAULT_BOARD_DIM, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic, units_heuristic};
 
 fn main() {
     let dim = DEFAULT_BOARD_DIM;
@@ -6,7 +6,9 @@ fn main() {
     let max_depth = DEFAULT_MAX_DEPTH;
     // let max_depth = 4;
     let drop_prob = Some(0.005);
-    let mut game = Game::new(dim, drop_prob,max_depth);
+    // let heuristic = DEFAULT_HEURISTIC;
+    let heuristic = units_heuristic;
+    let mut game = Game::new(dim,heuristic,drop_prob,max_depth);
     let play_alone = std::env::args().len() > 1;
 
     loop {

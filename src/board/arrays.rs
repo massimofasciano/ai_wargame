@@ -73,21 +73,6 @@ impl<I> T {
         let data = self.inner_mut();
         data[index] = value;
     }
-    // pub fn get_two_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[BoardCellRefMut;2]> {
-    //     let index0 = self.to_index(coord0);
-    //     let index1 = self.to_index(coord1);
-    //     if index0 == index1 || index0 >= self.len() || index1 >= self.len() {
-    //         return None
-    //     }
-    //     let ref_mut_0 : &mut BoardCell;
-    //     let ref_mut_1 : &mut BoardCell;
-    //     let data = self.inner_mut();
-    //     unsafe {
-    //         ref_mut_0 = &mut *(data.get_unchecked_mut(index0) as *mut _);
-    //         ref_mut_1 = &mut *(data.get_unchecked_mut(index1) as *mut _);
-    //     }
-    //     Some([ref_mut_0.to_ref_mut(), ref_mut_1.to_ref_mut()])
-    // }
     pub fn get_two_data_mut(&mut self, coord0: Coord, coord1: Coord) -> Option<[&mut BoardCellData;2]> {
         let index0 = self.to_index(coord0);
         let index1 = self.to_index(coord1);
@@ -110,6 +95,12 @@ impl<I> T {
     pub fn iter_units(&self) -> impl Iterator<Item=&BoardCell> {
         let data = self.inner();
         data.iter().filter(|c|c.is_unit())
+    }
+    pub fn iter_player_units<'a>(&'a self, player: Player) -> impl Iterator<Item=&BoardCell> + 'a {
+        let data = self.inner();
+        data.iter().filter(move|cell|{
+                cell.is_unit() && cell.player().unwrap() == player
+        })
     }
     pub fn iter_unit_coords<'a>(&'a self) -> impl Iterator<Item=Coord> + 'a {
         self.rect_iter().filter(|coord| {

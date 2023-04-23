@@ -109,6 +109,11 @@ impl Board {
     pub fn iter_units(&self) -> std::collections::hash_map::Values<Coord, BoardCell> {
         self.data.values()
     }
+    pub fn iter_player_units<'a>(&'a self, player: Player) -> impl Iterator<Item=&BoardCell> + 'a {
+        self.data.values().filter(move|cell|{
+                cell.is_unit() && cell.player().unwrap() == player
+        })
+    }
     pub fn iter_unit_coords<'a>(&'a self) -> impl Iterator<Item=Coord> + 'a {
         self.data.keys().map(Coord::clone)
     }

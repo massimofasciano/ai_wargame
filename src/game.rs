@@ -1,14 +1,15 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, win_heuristic, DEFAULT_MAX_DEPTH};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, win_heuristic, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic};
 use anyhow::anyhow;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Game {
     state: GameState,
     dim: Dim,
     total_moves: usize,
     drop_prob: Option<f32>,
     max_depth: usize,
+    heuristic: Heuristic,
 }
 
 #[derive(Debug, Clone)]
@@ -18,7 +19,7 @@ pub struct GameState {
 }
 
 impl Game {
-    pub fn new(dim: Dim, drop_prob: Option<f32>, max_depth: usize) -> Self {
+    pub fn new(dim: Dim, heuristic: Heuristic, drop_prob: Option<f32>, max_depth: usize) -> Self {
         let mut game = Self {
             state: GameState {
                 player: Player::default(),
@@ -28,6 +29,7 @@ impl Game {
             total_moves : 0,
             drop_prob,
             max_depth,
+            heuristic,
         };
         let md = dim-1;
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
@@ -364,8 +366,11 @@ impl Game {
         let rect_iter = source.rect_around(1).rect_iter();
         rect_iter.filter_map(move|target|self.action_from_coords(source, target).ok())
     }
-    pub fn player_units<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
+    pub fn player_unit_coords<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
         self.state.board.iter_player_unit_coords(player)
+    }
+    pub fn player_units<'a>(&'a self, player: Player) -> impl Iterator<Item = &BoardCell> + 'a {
+        self.state.board.iter_player_units(player)
     }
     pub fn suggest_action(&self) -> Action {
         let suggestion = self.suggest_action_rec(self.max_depth).1;
@@ -375,13 +380,17 @@ impl Game {
             Action::default()
         }
     }
+    pub fn heuristic(&self) -> HeuristicScore {
+        let h = self.heuristic;
+        h(self)
+    }
     pub fn suggest_action_rec(&self, depth: usize) -> (Option<HeuristicScore>, Option<Action>) {
         if depth == 0 || self.check_if_winner().is_some() {
-            (Some(win_heuristic(self)),None)
+            (Some(self.heuristic()),None)
         } else {
             let mut best_action = None;
             let mut best_score = None;
-            let possible_actions = self.player_units(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
+            let possible_actions = self.player_unit_coords(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
             let mut rng = rand::thread_rng();
             let mut possible_actions = possible_actions.collect::<Vec<_>>();
             possible_actions.shuffle(&mut rng);
@@ -418,7 +427,7 @@ impl Game {
 
 impl Default for Game {
     fn default() -> Self {
-        Self::new(10, None, DEFAULT_MAX_DEPTH)
+        Self::new(10, DEFAULT_HEURISTIC, None, DEFAULT_MAX_DEPTH)
     }
 }
 
