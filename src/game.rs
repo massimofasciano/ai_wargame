@@ -2,21 +2,37 @@ use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, 
 use anyhow::anyhow;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Game {
     state: GameState,
-    dim: Dim,
-    total_moves: usize,
-    drop_prob: Option<f32>,
-    max_depth: usize,
-    attacker_heuristic: Heuristic,
-    defender_heuristic: Heuristic,
+    info: GameInfo,
 }
 
 #[derive(Debug, Clone)]
 pub struct GameState {
     player: Player,
     board: Board,
+}
+
+#[derive(Debug, Clone)]
+pub struct GameInfo {
+    dim: Dim,
+    total_moves: usize,
+    drop_prob: Option<f32>,
+    max_depth: usize,
+    heuristics: GameHeuristics,
+}
+
+#[derive(Clone)]
+pub struct GameHeuristics {
+    attacker: Heuristic,
+    defender: Heuristic,
+}
+
+impl std::fmt::Debug for GameHeuristics {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f,"[attacker_heuristic,defender_heuristic]")
+    }
 }
 
 impl Game {
@@ -26,12 +42,16 @@ impl Game {
                 player: Player::default(),
                 board: Board::new(dim),
             },
-            dim,
-            total_moves : 0,
-            drop_prob,
-            max_depth,
-            attacker_heuristic,
-            defender_heuristic,
+            info: GameInfo { 
+                dim,
+                total_moves : 0,
+                drop_prob,
+                max_depth,
+                heuristics: GameHeuristics {
+                    attacker: attacker_heuristic,
+                    defender: defender_heuristic,
+                }
+        },
         };
         let md = dim-1;
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
@@ -52,11 +72,11 @@ impl Game {
             game.set_cell((row,col),BoardCell::new_unit(p2, unit_type));
             game.set_cell((md-row,col),BoardCell::new_unit(p1, unit_type));
         }
-        game.drop_prob = drop_prob;
+        game.info.drop_prob = drop_prob;
         game
     }
     pub fn dim(&self) -> Dim {
-        self.dim
+        self.info.dim
     }
     pub fn remove_cell(&mut self, coord: Coord) -> Option<BoardCell> {
         if self.is_valid_position(coord) {
@@ -99,17 +119,17 @@ impl Game {
         self.state.player
     }
     pub fn total_moves(&self) -> usize {
-        self.total_moves
+        self.info.total_moves
     }
     pub fn next_player(&mut self) -> Player {
         self.state.player = self.state.player.next();
-        self.total_moves += 1;
+        self.info.total_moves += 1;
         self.state.player
     }
     pub fn is_valid_position(&self, coord : Coord) -> bool {
         let (row,col) = coord.to_tuple();
-        let is_valid = row >= 0 && col >= 0 && row < self.dim && col < self.dim;
-        debug_assert_eq!(is_valid,true,"({},{}) is not valid for a {}x{} board",row,col,self.dim,self.dim);
+        let is_valid = row >= 0 && col >= 0 && row < self.dim() && col < self.dim();
+        debug_assert_eq!(is_valid,true,"({},{}) is not valid for a {}x{} board",row,col,self.dim(),self.dim());
         is_valid
     }
     pub fn is_valid_move(&mut self, from: Coord, to: Coord) -> bool {
@@ -200,7 +220,7 @@ impl Game {
     }
     pub fn random_drop(&mut self) -> DropOutcome {
         let mut rng = rand::thread_rng();
-        if self.drop_prob.is_some() && rng.gen::<f32>() < self.drop_prob.unwrap() {
+        if self.info.drop_prob.is_some() && rng.gen::<f32>() < self.info.drop_prob.unwrap() {
             let unit_type = *[UnitType::Hacker,UnitType::Repair].choose(&mut rng).expect("expect a hacker or repair");
             if let Some(empty_coord) = self.empty_coords().choose(&mut rng) {
                 self.set_cell(empty_coord, BoardCell::new_unit(self.player(), unit_type));
@@ -351,13 +371,13 @@ impl Game {
     pub fn pretty_print(&self) {
         println!("Next player: {}",self.player());
         print!("    ");
-        for col in 0..self.dim {
+        for col in 0..self.dim() {
             print!(" {:>2} ",col);
         }
         println!();
-        for row in 0..self.dim {
+        for row in 0..self.dim() {
             print!("{:>2}: ",(row as u8 +'A' as u8) as char);
-            for col in 0..self.dim {
+            for col in 0..self.dim() {
                 let cell = self[Coord::new(row,col)];
                 print!(" {}",cell.to_pretty_compact_string());
             }
@@ -378,7 +398,7 @@ impl Game {
         self.state.board.iter_units()
     }
     pub fn suggest_action(&self) -> Action {
-        let suggestion = self.suggest_action_rec(self.max_depth).1;
+        let suggestion = self.suggest_action_rec(self.info.max_depth).1;
         if suggestion.is_some() {
             suggestion.unwrap()
         } else {
@@ -394,9 +414,9 @@ impl Game {
             Some(None) => 0, // draw
             None => { // not finished so call appropriate heuristic
                 let heuristic = if self.player().is_attacker() {
-                    self.attacker_heuristic
+                    self.info.heuristics.attacker
                 } else {
-                    self.defender_heuristic
+                    self.info.heuristics.defender
                 };
                 heuristic(self)
             }
@@ -425,7 +445,7 @@ impl Game {
         }
     }
     pub fn computer_play_turn(&mut self) {
-        if let (_,Some(best_action)) = self.suggest_action_rec(self.max_depth) {
+        if let (_,Some(best_action)) = self.suggest_action_rec(self.info.max_depth) {
             if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
                 println!("# {} {}", player, action);
                 if outcome.is_useful_info() {
