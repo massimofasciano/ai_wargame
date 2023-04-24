@@ -4,10 +4,12 @@ fn main() {
     let dim = DEFAULT_BOARD_DIM;
     let drop_prob = None;
     // let drop_prob = Some(0.005);
-    let max_depth = 1;
+    let max_depth = Some(6);
+    let max_moves = Some(150);
+    let max_seconds = Some(1.0);
     let attacker_heuristic = units_score_distance_center;
     let defender_heuristic = units_health_heuristic;
-    let mut game = Game::new(dim,attacker_heuristic,defender_heuristic,drop_prob,max_depth);
+    let mut game = Game::new(dim,attacker_heuristic,defender_heuristic,drop_prob,max_depth,max_moves,max_seconds);
     let play_alone = std::env::args().len() > 1;
 
     loop {
@@ -15,13 +17,13 @@ fn main() {
         game.pretty_print();
         println!();
 
-        if let Some(winner) = game.check_if_winner() {
+        if let Some(winner) = game.end_game_result() {
             println!("{} in {} moves!", if winner.is_none() {
                 "draw".to_string()
             } else {
                 format!("{} wins",winner.unwrap())
             }, game.total_moves());
-            println!("{:#?}",game);
+            // println!("{:#?}",game);
             break;
         }
 
