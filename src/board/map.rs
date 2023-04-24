@@ -49,7 +49,9 @@ impl Board {
     pub fn remove(&mut self, coord: Coord) -> Option<BoardCell> {
         if self.is_valid_position(coord) {
             if let Some(cell_ref) = self.data.get_mut(&coord) {
-                Some(std::mem::take(cell_ref))
+                let old_cell = std::mem::take(cell_ref);
+                self.data.remove(&coord);
+                Some(old_cell)
             } else {
                 Some(BoardCell::new())
             }

@@ -4,7 +4,7 @@ fn main() {
     let dim = DEFAULT_BOARD_DIM;
     let drop_prob = None;
     // let drop_prob = Some(0.005);
-    let max_depth = 4;
+    let max_depth = 1;
     let attacker_heuristic = units_score_distance_center;
     let defender_heuristic = units_health_heuristic;
     let mut game = Game::new(dim,attacker_heuristic,defender_heuristic,drop_prob,max_depth);
@@ -21,6 +21,7 @@ fn main() {
             } else {
                 format!("{} wins",winner.unwrap())
             }, game.total_moves());
+            println!("{:#?}",game);
             break;
         }
 

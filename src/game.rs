@@ -31,7 +31,7 @@ pub struct GameHeuristics {
 
 impl std::fmt::Debug for GameHeuristics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"[attacker_heuristic,defender_heuristic]")
+        write!(f,"{:#?}",vec!["attacker_heuristic","defender_heuristic"])
     }
 }
 
