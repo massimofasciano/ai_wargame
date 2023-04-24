@@ -455,6 +455,8 @@ impl Game {
         if let Some(max_moves) = self.info.max_moves {
             if self.total_moves() >= max_moves {
                 println!("maximum moves played ({})",max_moves);
+            } else {
+                println!("{}/{} moves played",self.total_moves(),max_moves);
             }
         } else {
             println!("{} moves played",self.total_moves());
@@ -486,6 +488,11 @@ impl Game {
     }
     pub fn units<'a>(&'a self) -> impl Iterator<Item = &BoardCell> + 'a {
         self.state.board.iter_units()
+    }
+    pub fn unit_coord_pairs<'a>(&'a self) -> impl Iterator<Item = CoordPair> + 'a {
+        self.state.board.iter_unit_coords().flat_map(|from| 
+            self.state.board.iter_unit_coords().filter_map(move|to| 
+                if from==to {None} else {Some(CoordPair::new(from,to))}))
     }
     pub fn heuristic(&self, player: Player) -> HeuristicScore {
         let result = self.end_game_result();

@@ -138,5 +138,8 @@ impl CoordPair {
             Box::new(self.from.col..=self.to.col)
         }
     }
+    pub fn moves_distance(&self) -> Dim {
+        (self.from.row - self.to.row).abs() + (self.from.col - self.to.col).abs()
+    }
 }
 
