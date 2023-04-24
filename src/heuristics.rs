@@ -3,7 +3,7 @@ use crate::{Game, BoardCell, Player, Unit, UnitType};
 pub type HeuristicScore = i32;
 pub type Heuristic = fn(&Game)->HeuristicScore;
 
-pub fn win_heuristic(_game: &Game) -> HeuristicScore {
+pub fn zero_heuristic(_game: &Game) -> HeuristicScore {
     0
 }
 

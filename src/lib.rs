@@ -18,14 +18,12 @@ pub use cell::{BoardCell,BoardCellData};
 pub use unit_type::UnitType;
 pub use player::Player;
 pub use actions::{Action, ActionOutcome, DropOutcome, IsUsefulInfo};
-pub use heuristics::{Heuristic,HeuristicScore,win_heuristic,units_heuristic,
-    units_health_heuristic,units_health_friend_heuristic,units_health_opponent_heuristic,
-    units_distance_from_center_row,units_score_distance_center};
+pub use heuristics::{Heuristic,HeuristicScore};
 
 const MAX_HEALTH : Health = 9;
 pub const DEFAULT_BOARD_DIM : Dim = 8;
 pub const DEFAULT_MAX_DEPTH : usize = 3;
-pub const DEFAULT_HEURISTIC : Heuristic = win_heuristic;
+pub const DEFAULT_HEURISTIC : Heuristic = heuristics::zero_heuristic;
 
 trait DisplayFirstLetter : std::fmt::Display {
     fn to_first_letter(&self) -> char {

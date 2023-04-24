@@ -460,11 +460,13 @@ impl Game {
     }
     pub fn suggest_action(&self) -> (Action, f32, f32) {
         let start_time = SystemTime::now();
-        let (_,suggestion, avg_depth) = self.suggest_action_rec(0, start_time);
+        let (_,suggestion, avg_depth) = self.suggest_action_rec(self.player(), 0, start_time);
         let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
         (suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
-    pub fn heuristic(&self) -> HeuristicScore {
+    pub fn heuristic(&self, controlling_player: Player) -> HeuristicScore {
+        // controlling_player: the player that will make the final move
+        // current_player: the player that is making the virtual move at this level of the search tree
         let current_player = self.player();
         let result = self.end_game_result();
         let score = match result {
@@ -472,7 +474,7 @@ impl Game {
             Some(Some(_)) => HeuristicScore::MIN, // lose
             Some(None) => 0, // draw
             None => { // not finished so call appropriate heuristic
-                let heuristic = if self.player().is_attacker() {
+                let heuristic = if controlling_player.is_attacker() {
                     self.info.heuristics.attacker
                 } else {
                     self.info.heuristics.defender
@@ -482,9 +484,9 @@ impl Game {
         };
         score - self.total_moves() as HeuristicScore
     }
-    pub fn suggest_action_rec(&self, depth: usize, start_time: SystemTime) -> (Option<HeuristicScore>, Option<Action>, f32) {
+    pub fn suggest_action_rec(&self, player: Player, depth: usize, start_time: SystemTime) -> (Option<HeuristicScore>, Option<Action>, f32) {
         if self.info.max_depth.is_some() && depth >= self.info.max_depth.unwrap() || self.end_game_result().is_some() {
-            (Some(self.heuristic()),None,depth as f32)
+            (Some(self.heuristic(player)),None,depth as f32)
         } else {
             let mut best_action = None;
             let mut best_score = None;
@@ -515,7 +517,7 @@ impl Game {
                 }
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-                let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(depth+1, start_time);
+                let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(player, depth+1, start_time);
                 total_depth += rec_avg_depth;
                 if best_score.is_none() || score.is_some() && score.unwrap() > best_score.unwrap() {
                     best_score = score;
