@@ -481,7 +481,9 @@ impl Game {
         }
     }
     pub fn computer_play_turn(&mut self) {
-        if let (_,Some(best_action)) = self.suggest_action_rec(self.info.max_depth) {
+        let mut computer_game = self.clone();
+        computer_game.set_drop_prob(None);
+        if let (_,Some(best_action)) = computer_game.suggest_action_rec(self.info.max_depth) {
             if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
                 println!("# {} {}", player, action);
                 if outcome.is_useful_info() {
