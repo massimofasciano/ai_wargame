@@ -12,12 +12,12 @@ pub struct Game {
 pub struct GameState {
     player: Player,
     board: Board,
+    total_moves: usize,
 }
 
 #[derive(Debug, Clone)]
 pub struct GameInfo {
     dim: Dim,
-    total_moves: usize,
     drop_prob: Option<f32>,
     max_depth: usize,
     heuristics: GameHeuristics,
@@ -41,10 +41,10 @@ impl Game {
             state: GameState {
                 player: Player::default(),
                 board: Board::new(dim),
+                total_moves : 0,
             },
             info: GameInfo { 
                 dim,
-                total_moves : 0,
                 drop_prob,
                 max_depth,
                 heuristics: GameHeuristics {
@@ -119,11 +119,11 @@ impl Game {
         self.state.player
     }
     pub fn total_moves(&self) -> usize {
-        self.info.total_moves
+        self.state.total_moves
     }
     pub fn next_player(&mut self) -> Player {
         self.state.player = self.state.player.next();
-        self.info.total_moves += 1;
+        self.state.total_moves += 1;
         self.state.player
     }
     pub fn is_valid_position(&self, coord : Coord) -> bool {
