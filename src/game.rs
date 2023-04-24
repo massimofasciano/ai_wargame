@@ -458,11 +458,11 @@ impl Game {
     pub fn units<'a>(&'a self) -> impl Iterator<Item = &BoardCell> + 'a {
         self.state.board.iter_units()
     }
-    pub fn suggest_action(&self) -> (Action, f32) {
+    pub fn suggest_action(&self) -> (Action, f32, f32) {
         let start_time = SystemTime::now();
-        let suggestion = self.suggest_action_rec(0, start_time);
+        let (_,suggestion, avg_depth) = self.suggest_action_rec(0, start_time);
         let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
-        (suggestion.1.expect("don't know what to do!"),elapsed_seconds)
+        (suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
     pub fn heuristic(&self) -> HeuristicScore {
         let current_player = self.player();
@@ -482,16 +482,24 @@ impl Game {
         };
         score - self.total_moves() as HeuristicScore
     }
-    pub fn suggest_action_rec(&self, depth: usize, start_time: SystemTime) -> (Option<HeuristicScore>, Option<Action>) {
+    pub fn suggest_action_rec(&self, depth: usize, start_time: SystemTime) -> (Option<HeuristicScore>, Option<Action>, f32) {
         if self.info.max_depth.is_some() && depth >= self.info.max_depth.unwrap() || self.end_game_result().is_some() {
-            (Some(self.heuristic()),None)
+            (Some(self.heuristic()),None,depth as f32)
         } else {
             let mut best_action = None;
             let mut best_score = None;
+            let mut total_depth = 0.0;
             let possible_actions = self.player_unit_coords(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
-            let mut rng = rand::thread_rng();
-            let mut possible_actions = possible_actions.collect::<Vec<_>>();
-            possible_actions.shuffle(&mut rng);
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "rand-actions")] {
+                    let mut possible_actions = possible_actions.collect::<Vec<_>>();
+                    let mut rng = rand::thread_rng();
+                    possible_actions.shuffle(&mut rng);
+                } else {
+                    let possible_actions = possible_actions.collect::<Vec<_>>();
+                }
+            }
+            let total_count = possible_actions.len();
             for possible_action in possible_actions {
                 if best_action.is_none() {
                     best_action = Some(possible_action);
@@ -499,24 +507,28 @@ impl Game {
                 if let Some(max_seconds) = self.info.max_seconds {
                     let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
                     if elapsed_seconds > max_seconds {
+                        if total_count == 0 {
+                            total_depth = depth as f32;
+                        }
                         break;
                     }
                 }
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-                let (score, _) = possible_game.suggest_action_rec(depth+1, start_time);
+                let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(depth+1, start_time);
+                total_depth += rec_avg_depth;
                 if best_score.is_none() || score.is_some() && score.unwrap() > best_score.unwrap() {
                     best_score = score;
                     best_action = Some(possible_action);
                 }
             }
-            (best_score, best_action)
+            (best_score, best_action, total_depth / total_count as f32)
         }
     }
     pub fn computer_play_turn(&mut self) {
         let mut computer_game = self.clone();
         computer_game.set_drop_prob(None);
-        let (best_action,elapsed_seconds) = computer_game.suggest_action();
+        let (best_action,elapsed_seconds, avg_depth) = computer_game.suggest_action();
         if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
             println!("# {} {}", player, action);
             if outcome.is_useful_info() {
@@ -526,6 +538,7 @@ impl Game {
                 println!("# {}", drop_outcome);
             }
             println!("# Compute time: {:.1} sec", elapsed_seconds);
+            println!("# Average depth: {:.1}", avg_depth);
         } else {
             panic!("play turn should work");
         }

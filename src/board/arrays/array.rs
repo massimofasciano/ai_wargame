@@ -1,4 +1,5 @@
-use crate::{BoardCell, Dim, DEFAULT_BOARD_SIZE};
+use crate::{BoardCell, Dim};
+use super::DEFAULT_BOARD_SIZE;
 
 pub type Board = BoardArray<DEFAULT_BOARD_SIZE>;
 

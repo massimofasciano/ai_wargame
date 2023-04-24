@@ -2,10 +2,14 @@ use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, CoordPair, Player, BoardCe
 
 use duplicate::duplicate_item;
 
+const DEFAULT_BOARD_SIZE : usize = DEFAULT_BOARD_DIM as usize * DEFAULT_BOARD_DIM as usize;
+
 pub mod array;
 pub mod vec;
 
-// pub use array::Board;
+#[cfg(feature = "board_array")]
+pub use array::Board;
+#[cfg(feature = "board_vec")]
 pub use vec::Board;
 
 #[duplicate_item(I T D; [const SIZE: usize] [array::BoardArray<SIZE>] [array::BoardData<SIZE>]; [] [vec::Board] [vec::BoardData])]

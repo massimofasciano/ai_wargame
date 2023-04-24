@@ -4,9 +4,9 @@ fn main() {
     let dim = DEFAULT_BOARD_DIM;
     let drop_prob = None;
     // let drop_prob = Some(0.005);
-    let max_depth = Some(5);
+    let max_depth = Some(6);
     let max_moves = Some(150);
-    let max_seconds = Some(1.0);
+    let max_seconds = Some(5.0);
     let attacker_heuristic = units_health_opponent_heuristic;
     let defender_heuristic = units_health_heuristic;
     let mut game = Game::new(dim,attacker_heuristic,defender_heuristic,drop_prob,max_depth,max_moves,max_seconds);
@@ -51,9 +51,10 @@ fn main() {
 
         } else {
 
-            let (suggestion,elapsed_seconds) = game.suggest_action();
+            let (suggestion,elapsed_seconds,avg_depth) = game.suggest_action();
             println!("Suggestion: {}",suggestion);
             println!("Compute time: {:.1} sec",elapsed_seconds);
+            println!("Average depth: {:.1}", avg_depth);
             if let Some((from,to)) = game.parse_move_stdin() {
                 game.console_play_turn(from, to);
             } else {
