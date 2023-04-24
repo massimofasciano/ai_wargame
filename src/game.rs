@@ -1,11 +1,12 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic, DEFAULT_BOARD_DIM};
 use anyhow::anyhow;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Game {
     state: GameState,
-    info: GameInfo,
+    info: Rc<GameInfo>,
 }
 
 #[derive(Debug, Clone)]
@@ -13,6 +14,21 @@ pub struct GameState {
     player: Player,
     board: Board,
     total_moves: usize,
+}
+
+impl GameState {
+    fn new(dim: Dim) -> Self {
+        Self {
+            player: Default::default(),
+            board: Board::new(dim),
+            total_moves: 0,
+        }
+    }
+}
+impl Default for GameState {
+    fn default() -> Self {
+        Self::new(DEFAULT_BOARD_DIM)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -23,10 +39,30 @@ pub struct GameInfo {
     heuristics: GameHeuristics,
 }
 
+impl Default for GameInfo {
+    fn default() -> Self {
+        Self {
+            dim: DEFAULT_BOARD_DIM, 
+            drop_prob: None,
+            max_depth: DEFAULT_MAX_DEPTH,
+            heuristics: Default::default()
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct GameHeuristics {
     attacker: Heuristic,
     defender: Heuristic,
+}
+
+impl Default for GameHeuristics {
+    fn default() -> Self {
+        Self {
+            attacker: DEFAULT_HEURISTIC,
+            defender: DEFAULT_HEURISTIC,
+        }
+    }
 }
 
 impl std::fmt::Debug for GameHeuristics {
@@ -35,23 +71,25 @@ impl std::fmt::Debug for GameHeuristics {
     }
 }
 
+impl Default for Game {
+    fn default() -> Self {
+        Self::new(DEFAULT_BOARD_DIM, DEFAULT_HEURISTIC, DEFAULT_HEURISTIC, None, DEFAULT_MAX_DEPTH)
+    }
+}
+
 impl Game {
     pub fn new(dim: Dim, attacker_heuristic: Heuristic, defender_heuristic: Heuristic, drop_prob: Option<f32>, max_depth: usize) -> Self {
         let mut game = Self {
-            state: GameState {
-                player: Player::default(),
-                board: Board::new(dim),
-                total_moves : 0,
-            },
-            info: GameInfo { 
+            state: GameState::new(dim),
+            info: Rc::new(GameInfo { 
                 dim,
                 drop_prob,
                 max_depth,
                 heuristics: GameHeuristics {
                     attacker: attacker_heuristic,
                     defender: defender_heuristic,
-                }
-        },
+                },
+            }),
         };
         let md = dim-1;
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
@@ -72,11 +110,15 @@ impl Game {
             game.set_cell((row,col),BoardCell::new_unit(p2, unit_type));
             game.set_cell((md-row,col),BoardCell::new_unit(p1, unit_type));
         }
-        game.info.drop_prob = drop_prob;
         game
     }
     pub fn dim(&self) -> Dim {
         self.info.dim
+    }
+    pub fn set_drop_prob(&mut self, drop_prob: Option<f32>) {
+        let mut info = self.info.as_ref().clone();
+        info.drop_prob = drop_prob;
+        self.info = Rc::new(info);
     }
     pub fn remove_cell(&mut self, coord: Coord) -> Option<BoardCell> {
         if self.is_valid_position(coord) {
@@ -237,7 +279,6 @@ impl Game {
             if let Some((_, unit)) = cell.unit() {
                 if unit.health == 0 {
                     self.remove_cell(coord);
-                    // *cell = BoardCell::default();
                 }
             }
         }
@@ -460,12 +501,6 @@ impl Game {
         } else {
             panic!("don't know what to do!");
         }
-    }
-}
-
-impl Default for Game {
-    fn default() -> Self {
-        Self::new(10, DEFAULT_HEURISTIC, DEFAULT_HEURISTIC, None, DEFAULT_MAX_DEPTH)
     }
 }
 
