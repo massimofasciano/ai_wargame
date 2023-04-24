@@ -187,12 +187,18 @@ impl Game {
         self.is_valid_position(coord0) && self.is_valid_position(coord1) && 
         (coord1.row - coord0.row).abs() <= 1 && (coord1.col - coord0.col).abs() <= 1
     }
-    pub fn in_range(&self, range: u8, coord0 : Coord, coord1 : Coord) -> bool {
-        coord0 == coord1 || // we consider our own position as in range
-        self.is_valid_position(coord0) && 
-        self.is_valid_position(coord1) && 
-        (coord1.row - coord0.row).abs() as u8 <= range && 
-        (coord1.col - coord0.col).abs() as u8 <= range
+    // pub fn in_range(&self, range: u8, coord0 : Coord, coord1 : Coord) -> bool {
+    //     coord0 == coord1 || // we consider our own position as in range
+    //     self.is_valid_position(coord0) && 
+    //     self.is_valid_position(coord1) && 
+    //     (coord1.row - coord0.row).abs() as u8 <= range && 
+    //     (coord1.col - coord0.col).abs() as u8 <= range
+    // }
+    pub fn in_range(&self, range: u8, from : Coord, to : Coord) -> bool {
+        // no diagonals and same position not allowed
+        self.is_valid_position(from) && 
+        self.is_valid_position(to) && 
+        ((to.row - from.row).abs() + (to.col - from.col).abs()) as u8 == range
     }
     pub fn unit_move(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,anyhow::Error> {
         if self.is_valid_move(from, to) {
