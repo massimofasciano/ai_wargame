@@ -1,4 +1,4 @@
-use crate::{DisplayFirstLetter, Health};
+use crate::{DisplayFirstLetter, Health, HeuristicScore};
 
 #[derive(Debug, PartialEq, PartialOrd,Default, Clone, Copy)]
 #[derive(derive_more::Display)]
@@ -15,6 +15,17 @@ pub enum UnitType {
 impl DisplayFirstLetter for UnitType {}
 
 impl UnitType {
+    pub fn score(&self) -> HeuristicScore {
+        use UnitType::*;
+        match self {
+            AI => 50,
+            Hacker => 10,
+            Repair => 20,
+            Tank => 10,
+            Drone => 10,
+            Soldier => 10,
+        }
+    }
     pub fn initial_health(&self) -> Health {
         use UnitType::*;
         match self {

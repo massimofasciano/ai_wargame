@@ -217,11 +217,25 @@ impl Game {
             Err(anyhow!("not a valid move"))
         }
     }
-    pub fn end_game_result(&self) -> Option<Option<Player>>{
+    pub fn player_score(&self, player: Player) -> HeuristicScore {
+        self.units().map(|cell| cell.score(player)).sum()
+    }
+    pub fn best_score_player(&self) -> Player {
+        let player_score = self.player_score(self.player());
+        if player_score > 0 {
+            self.player()
+        } else if player_score < 0 {
+            self.player().next()
+        } else {
+            // if score is equal, the player that started second gets the points
+            Player::default().next()
+        }
+    }
+    pub fn end_game_result(&self) -> Option<Player>{
         if self.info.max_moves.is_some() && self.total_moves() >= self.info.max_moves.unwrap() {
             // max moves reached: draw
             // println!("DEBUG: reached max moves!");
-            return Some(None)
+            return Some(self.best_score_player())
         } 
         assert_eq!(Player::cardinality(),2);
         let mut p_all = Player::all();
@@ -230,7 +244,7 @@ impl Game {
         let mut ai_p1 = false;
         let mut ai_p2 = false;
         for c in self.state.board.iter_units() {
-            if let Some((player,unit)) = c.unit() {
+            if let Some((player,unit)) = c.player_unit() {
                 if player == &p1 && unit.unit_type == UnitType::AI {
                     ai_p1 = true;
                 }
@@ -241,11 +255,11 @@ impl Game {
             if ai_p1 && ai_p2 { break }
         }
         if ai_p1 && !ai_p2 {
-            Some(Some(p1))
+            Some(p1)
         } else if ai_p2 && !ai_p1 {
-            Some(Some(p2))
+            Some(p2)
         } else if !ai_p2 && !ai_p1 {
-            Some(None)
+            Some(self.best_score_player())
         } else {
             None
         }
@@ -298,7 +312,7 @@ impl Game {
     }
     pub fn remove_dead(&mut self, coord: Coord) {
         if let Some(cell) = self.get_cell(coord) {
-            if let Some((_, unit)) = cell.unit() {
+            if let Some((_, unit)) = cell.player_unit() {
                 if unit.health == 0 {
                     self.remove_cell(coord);
                 }
@@ -413,8 +427,8 @@ impl Game {
                 Ok(Action::Move { from, to })
             } else if self[to].is_unit() {
                 // destination is a unit
-                let (player_source,unit_source) = self[from].unit().unwrap();
-                let (player_target,unit_target) = self[to].unit().unwrap();
+                let (player_source,unit_source) = self[from].player_unit().unwrap();
+                let (player_target,unit_target) = self[to].player_unit().unwrap();
                 if player_source != player_target {
                     // it's an opposing unit so we try to damage it (it will damage us back)
                     if unit_source.can_damage(unit_target) {
@@ -438,7 +452,13 @@ impl Game {
         }
     }
     pub fn pretty_print(&self) {
-        println!("{} moves played",self.total_moves());
+        if let Some(max_moves) = self.info.max_moves {
+            if self.total_moves() >= max_moves {
+                println!("maximum moves played ({})",max_moves);
+            }
+        } else {
+            println!("{} moves played",self.total_moves());
+        }
         println!("Next player: {}",self.player());
         print!("    ");
         for col in 0..self.dim() {
@@ -473,7 +493,7 @@ impl Game {
         // println!("DEBUG: for_player={:?} result={:?}",for_player,result);
         let moves = self.total_moves() as HeuristicScore;
         let score = match result {
-            Some(Some(winner)) => {
+            Some(winner) => {
                 if winner == player {
                     // quicker win is better
                     HeuristicScore::MAX - moves  
@@ -482,8 +502,6 @@ impl Game {
                     HeuristicScore::MIN + moves
                 }
             }
-            // draw (bad but better than loss, later is better)
-            Some(None) => HeuristicScore::MIN / 2 + moves,
             // not finished so call appropriate heuristic
             None => {
                 let heuristic = if player.is_attacker() {
@@ -491,8 +509,8 @@ impl Game {
                 } else {
                     self.info.heuristics.defender
                 };
-                // we subtract moves/10 to make later states of equal value worse
-                heuristic(self,player) - moves/10
+                // we subtract moves to make later states of equal value worse
+                heuristic(self,player) - moves
             }
         };
         // println!("score: {}",score);

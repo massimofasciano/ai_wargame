@@ -22,11 +22,7 @@ fn main() {
         println!();
 
         if let Some(winner) = game.end_game_result() {
-            println!("{} in {} moves!", if winner.is_none() {
-                "draw".to_string()
-            } else {
-                format!("{} wins",winner.unwrap())
-            }, game.total_moves());
+            println!("{} wins in {} moves!", winner, game.total_moves());
             // println!("{:#?}",game);
             break;
         }

@@ -1,4 +1,4 @@
-use crate::{UnitType, Player, Unit, DisplayFirstLetter};
+use crate::{UnitType, Player, Unit, DisplayFirstLetter, HeuristicScore};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(transparent)]
@@ -61,20 +61,32 @@ impl BoardCell {
             _ => None,
         }
     }
-    pub fn unit(&self) -> Option<(&Player,&Unit)> {
+    pub fn player_unit(&self) -> Option<(&Player,&Unit)> {
         match &self.data {
             Some(BoardCellData::Unit { player, unit }) => Some((player,unit)),
             _ => None,
         }
     }
-    pub fn unit_mut(&mut self) -> Option<(&mut Player,&mut Unit)> {
+    pub fn unit(&self) -> Option<&Unit> {
+        match &self.data {
+            Some(BoardCellData::Unit { player: _, unit }) => Some(unit),
+            _ => None,
+        }
+    }
+    pub fn player_unit_mut(&mut self) -> Option<(&mut Player,&mut Unit)> {
         match &mut self.data {
             Some(BoardCellData::Unit { player, unit }) => Some((player,unit)),
             _ => None,
         }
     }
+    pub fn unit_mut(&mut self) -> Option<&mut Unit> {
+        match &mut self.data {
+            Some(BoardCellData::Unit { player: _, unit }) => Some(unit),
+            _ => None,
+        }
+    }
     pub fn is_dead(&self) -> bool {
-        if let Some((_, unit)) = self.unit() {
+        if let Some((_, unit)) = self.player_unit() {
             unit.health == 0
         } else {
             false
@@ -105,6 +117,18 @@ impl BoardCell {
         match &mut self.data {
             None => None,
             Some(data) => Some(data),
+        }
+    }
+    pub fn score(&self, player: Player) -> HeuristicScore {
+        if self.is_empty() {
+            0
+        } else {
+            let score = self.unit().unwrap().score();
+            if self.player().unwrap() == player {
+                score
+            } else {
+                -score
+            }
         }
     }
 }

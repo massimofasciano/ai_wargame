@@ -41,7 +41,7 @@ fn cell_unit_type_health(cell: &BoardCell, current_player: &Player, count_friend
     if cell.is_empty() {
         0
     } else {
-        let (player, unit) = cell.unit().expect("must call with a cell containing a unit");
+        let (player, unit) = cell.player_unit().expect("must call with a cell containing a unit");
         let score = unit_health_score(unit);
         if player == current_player {
             if count_friend { score } else { 0 }
@@ -55,7 +55,7 @@ fn cell_unit_type(cell: &BoardCell, current_player: &Player) -> HeuristicScore {
     if cell.is_empty() {
         0
     } else {
-        let (player, unit) = cell.unit().expect("must call with a cell containing a unit");
+        let (player, unit) = cell.player_unit().expect("must call with a cell containing a unit");
         let score = unit_score(unit);
         if player == current_player {
             score
@@ -74,13 +74,5 @@ fn unit_score(unit: &Unit) -> HeuristicScore {
 }
 
 fn unit_type_score(unit_type: &UnitType) -> HeuristicScore {
-    use UnitType::*;
-    match unit_type {
-        AI => 30,
-        Hacker => 10,
-        Repair => 20,
-        Tank => 10,
-        Drone => 10,
-        Soldier => 10,
-    }
+    unit_type.score()
 }
