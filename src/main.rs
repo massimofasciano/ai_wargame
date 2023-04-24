@@ -59,9 +59,7 @@ fn main() {
             println!("Suggestion: {}",suggestion);
             println!("Compute time: {:.1} sec",elapsed_seconds);
             println!("Average depth: {:.1}", avg_depth);
-            if score.is_some() { 
-                println!("# Score: {}", score.unwrap());
-            }
+            println!("# Score: {}", score);
             if let Some((from,to)) = game.parse_move_stdin() {
                 game.console_play_turn(from, to);
             } else {

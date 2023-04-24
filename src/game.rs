@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic, DEFAULT_BOARD_DIM};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic, DEFAULT_BOARD_DIM, heuristics};
 use anyhow::anyhow;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
 use std::rc::Rc;
@@ -467,19 +467,14 @@ impl Game {
     pub fn units<'a>(&'a self) -> impl Iterator<Item = &BoardCell> + 'a {
         self.state.board.iter_units()
     }
-    pub fn heuristic(&self, controlling_player: Player) -> HeuristicScore {
-        // controlling_player: the player that will make the final move
-        // current_player: the player that is making the virtual move at this level of the search tree
+    pub fn heuristic(&self, player: Player) -> HeuristicScore {
         let result = self.end_game_result();
-        // if it's player N's turn to play it means we got to this state because of a move by player N-1 (or N+1 as it is cyclic)
-        // so we evaluate this state's score from player N+1's perspective
-        let for_player = self.player().next();
         // println!("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv");
         // println!("DEBUG: for_player={:?} result={:?}",for_player,result);
         let moves = self.total_moves() as HeuristicScore;
         let score = match result {
             Some(Some(winner)) => {
-                if winner == for_player {
+                if winner == player {
                     // quicker win is better
                     HeuristicScore::MAX - moves  
                 } else {
@@ -491,25 +486,21 @@ impl Game {
             Some(None) => HeuristicScore::MIN / 2 + moves,
             // not finished so call appropriate heuristic
             None => {
-                let heuristic = if for_player.is_attacker() {
+                let heuristic = if player.is_attacker() {
                     self.info.heuristics.attacker
                 } else {
                     self.info.heuristics.defender
                 };
                 // we subtract moves/10 to make later states of equal value worse
-                heuristic(self,for_player) - moves/10
+                heuristic(self,player) - moves/10
             }
         };
         // println!("score: {}",score);
         // self.pretty_print();
         // println!("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
-        if controlling_player == for_player {
-            -score
-        } else {
-            score
-        }
+        score
     }
-    pub fn suggest_action_rec(&self, controlling_player: Player, depth: usize, start_time: SystemTime) -> (Option<HeuristicScore>, Option<Action>, f32) {
+    pub fn suggest_action_rec(&self, maximizing_player: bool, player: Player, depth: usize, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
         let mut timeout = false;
         if let Some(max_seconds) = self.info.max_seconds {
             let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
@@ -518,10 +509,10 @@ impl Game {
             }
         }
         if timeout || self.info.max_depth.is_some() && depth >= self.info.max_depth.unwrap() || self.end_game_result().is_some() {
-            (Some(self.heuristic(controlling_player)),None,depth as f32)
+            (self.heuristic(player),None,depth as f32)
         } else {
             let mut best_action = None;
-            let mut best_score = None;
+            let mut best_score;
             let mut total_depth = 0.0;
             let mut total_count = 0;
             let possible_actions = self.player_unit_coords(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
@@ -533,31 +524,33 @@ impl Game {
                 } else {
                 }
             }
+            if maximizing_player {
+                best_score = heuristics::MIN_HEURISTIC_SCORE;
+            } else {
+                best_score = heuristics::MAX_HEURISTIC_SCORE;
+            }
             for possible_action in possible_actions {
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-                let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(controlling_player, depth+1, start_time);
+                let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(!maximizing_player, player, depth+1, start_time);
                 total_depth += rec_avg_depth;
                 total_count += 1;
                 // println!("DEBUG: depth={} best={:?} new={:?} new_action={:?}",depth, best_score,score,possible_action);
-                if best_score.is_none() || score.is_some() && 
-                (controlling_player == self.player() && score.unwrap() > best_score.unwrap() ||
-                    controlling_player != self.player() && score.unwrap() < best_score.unwrap())
-                 {
+                if maximizing_player && score > best_score || !maximizing_player && score < best_score {
                     best_score = score;
                     best_action = Some(possible_action);
                 }
             }
             if total_count == 0 {
-                (None,None,depth as f32)
+                (best_score, best_action, depth as f32)
             } else {
                 (best_score, best_action, total_depth / total_count as f32)
             }
         }
     }
-    pub fn suggest_action(&self) -> (Option<HeuristicScore>, Action, f32, f32) {
+    pub fn suggest_action(&self) -> (HeuristicScore, Action, f32, f32) {
         let start_time = SystemTime::now();
-        let (score,suggestion, avg_depth) = self.suggest_action_rec(self.player(), 0, start_time);
+        let (score,suggestion, avg_depth) = self.suggest_action_rec(true, self.player(), 0, start_time);
         let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
         (score,suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
@@ -575,9 +568,7 @@ impl Game {
             }
             println!("# Compute time: {:.1} sec", elapsed_seconds);
             println!("# Average depth: {:.1}", avg_depth);
-            if score.is_some() { 
-                println!("# Score: {}", score.unwrap());
-            }
+            println!("# Score: {}", score);
         } else {
             panic!("play turn should work");
         }

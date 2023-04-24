@@ -3,40 +3,38 @@ use crate::{Game, BoardCell, Player, Unit, UnitType};
 pub type HeuristicScore = i32;
 pub type Heuristic = fn(&Game, Player)->HeuristicScore;
 
+pub const MIN_HEURISTIC_SCORE : HeuristicScore = HeuristicScore::MIN;
+pub const MAX_HEURISTIC_SCORE : HeuristicScore = HeuristicScore::MAX;
+
 pub fn zero_heuristic(_game: &Game, _for_player : Player) -> HeuristicScore {
     0
 }
 
-pub fn units_heuristic(game: &Game, for_player : Player) -> HeuristicScore {
-    let current_player = for_player;
-    game.units().map(|cell|cell_unit_type(cell,&current_player)).sum()
+pub fn units_heuristic(game: &Game, player : Player) -> HeuristicScore {
+    game.units().map(|cell|cell_unit_type(cell,&player)).sum()
 }
 
-pub fn units_health_heuristic(game: &Game, for_player : Player) -> HeuristicScore {
-    let current_player = for_player;
-    game.units().map(|cell|cell_unit_type_health(cell,&current_player,true,true)).sum()
+pub fn units_health_heuristic(game: &Game, player : Player) -> HeuristicScore {
+    game.units().map(|cell|cell_unit_type_health(cell,&player,true,true)).sum()
 }
 
-pub fn units_health_friend_heuristic(game: &Game, for_player : Player) -> HeuristicScore {
-    let current_player = for_player;
-    game.units().map(|cell|cell_unit_type_health(cell,&current_player,true,false)).sum()
+pub fn units_health_friend_heuristic(game: &Game, player : Player) -> HeuristicScore {
+    game.units().map(|cell|cell_unit_type_health(cell,&player,true,false)).sum()
 }
 
-pub fn units_health_opponent_heuristic(game: &Game, for_player : Player) -> HeuristicScore {
-    let current_player = for_player;
-    game.units().map(|cell|cell_unit_type_health(cell,&current_player,false,true)).sum()
+pub fn units_health_opponent_heuristic(game: &Game, player : Player) -> HeuristicScore {
+    game.units().map(|cell|cell_unit_type_health(cell,&player,false,true)).sum()
 }
 
-pub fn units_distance_from_center_row(game: &Game, for_player : Player) -> HeuristicScore {
-    let current_player = for_player;
-    let player_coords = game.player_unit_coords(current_player);
+pub fn units_distance_from_center_row(game: &Game, player : Player) -> HeuristicScore {
+    let player_coords = game.player_unit_coords(player);
     player_coords.map(|coord|{
         (game.dim()/2-coord.row-1) as HeuristicScore
     }).sum()
 }
 
-pub fn units_score_distance_center(game: &Game, for_player : Player) -> HeuristicScore {
-    units_distance_from_center_row(game, for_player)+units_health_heuristic(game, for_player)
+pub fn units_score_distance_center(game: &Game, player : Player) -> HeuristicScore {
+    units_distance_from_center_row(game, player)+units_health_heuristic(game, player)
 }
 
 fn cell_unit_type_health(cell: &BoardCell, current_player: &Player, count_friend: bool, count_opponent: bool) -> HeuristicScore {
