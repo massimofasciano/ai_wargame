@@ -458,23 +458,20 @@ impl Game {
     pub fn units<'a>(&'a self) -> impl Iterator<Item = &BoardCell> + 'a {
         self.state.board.iter_units()
     }
-    pub fn suggest_action(&self) -> (Action, f32, f32) {
-        let start_time = SystemTime::now();
-        let (_,suggestion, avg_depth) = self.suggest_action_rec(self.player(), 0, start_time);
-        let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
-        (suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
-    }
-    pub fn heuristic(&self, controlling_player: Player) -> HeuristicScore {
+    pub fn heuristic(&self, _controlling_player: Player) -> HeuristicScore {
         // controlling_player: the player that will make the final move
         // current_player: the player that is making the virtual move at this level of the search tree
         let current_player = self.player();
         let result = self.end_game_result();
+        let moves = self.total_moves() as HeuristicScore;
         let score = match result {
-            Some(Some(winner)) if winner == current_player => HeuristicScore::MAX, // win
-            Some(Some(_)) => HeuristicScore::MIN, // lose
+             // quicker win is better
+            Some(Some(winner)) if winner == current_player => HeuristicScore::MAX - moves,
+            // later loss is better
+            Some(Some(_)) => HeuristicScore::MIN + moves,
             Some(None) => 0, // draw
             None => { // not finished so call appropriate heuristic
-                let heuristic = if controlling_player.is_attacker() {
+                let heuristic = if current_player.is_attacker() {
                     self.info.heuristics.attacker
                 } else {
                     self.info.heuristics.defender
@@ -485,12 +482,20 @@ impl Game {
         score - self.total_moves() as HeuristicScore
     }
     pub fn suggest_action_rec(&self, player: Player, depth: usize, start_time: SystemTime) -> (Option<HeuristicScore>, Option<Action>, f32) {
-        if self.info.max_depth.is_some() && depth >= self.info.max_depth.unwrap() || self.end_game_result().is_some() {
+        let mut timeout = false;
+        if let Some(max_seconds) = self.info.max_seconds {
+            let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
+            if elapsed_seconds > max_seconds {
+                timeout = true;
+            }
+        }
+        if timeout || self.info.max_depth.is_some() && depth >= self.info.max_depth.unwrap() || self.end_game_result().is_some() {
             (Some(self.heuristic(player)),None,depth as f32)
         } else {
             let mut best_action = None;
             let mut best_score = None;
             let mut total_depth = 0.0;
+            let mut total_count = 0;
             let possible_actions = self.player_unit_coords(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
             cfg_if::cfg_if! {
                 if #[cfg(feature = "rand-actions")] {
@@ -498,34 +503,31 @@ impl Game {
                     let mut rng = rand::thread_rng();
                     possible_actions.shuffle(&mut rng);
                 } else {
-                    let possible_actions = possible_actions.collect::<Vec<_>>();
                 }
             }
-            let total_count = possible_actions.len();
             for possible_action in possible_actions {
-                if best_action.is_none() {
-                    best_action = Some(possible_action);
-                }
-                if let Some(max_seconds) = self.info.max_seconds {
-                    let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
-                    if elapsed_seconds > max_seconds {
-                        if total_count == 0 {
-                            total_depth = depth as f32;
-                        }
-                        break;
-                    }
-                }
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
                 let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(player, depth+1, start_time);
                 total_depth += rec_avg_depth;
+                total_count += 1;
                 if best_score.is_none() || score.is_some() && score.unwrap() > best_score.unwrap() {
                     best_score = score;
                     best_action = Some(possible_action);
                 }
             }
-            (best_score, best_action, total_depth / total_count as f32)
+            if total_count == 0 {
+                (best_score, best_action, depth as f32)
+            } else {
+                (best_score, best_action, total_depth / total_count as f32)
+            }
         }
+    }
+    pub fn suggest_action(&self) -> (Action, f32, f32) {
+        let start_time = SystemTime::now();
+        let (_,suggestion, avg_depth) = self.suggest_action_rec(self.player(), 0, start_time);
+        let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
+        (suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
     pub fn computer_play_turn(&mut self) {
         let mut computer_game = self.clone();
