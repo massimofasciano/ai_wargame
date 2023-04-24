@@ -21,15 +21,19 @@ impl Unit {
     pub fn can_repair(&self, target: &Self) -> bool {
         assert!(target.health <= MAX_HEALTH);
         let repair = self.unit_type.repair_amount(&target.unit_type);
-        repair != 0 && target.health != MAX_HEALTH
+        let max_health = target.unit_type.initial_health();
+        // repair != 0 && target.health != MAX_HEALTH
+        repair != 0 && target.health != max_health
     }
     pub fn apply_repair(&mut self, target: &mut Self) -> u8 {
         assert!(target.health <= MAX_HEALTH);
         let repair = self.unit_type.repair_amount(&target.unit_type);
-        if repair + target.health < MAX_HEALTH {
+        let max_health = target.unit_type.initial_health();
+        // if repair + target.health < MAX_HEALTH {
+        if repair + target.health < max_health {
             target.health += repair;
         } else {
-            target.health = MAX_HEALTH;
+            target.health = max_health;
         }
         repair
     }

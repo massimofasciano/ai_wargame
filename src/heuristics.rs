@@ -14,7 +14,17 @@ pub fn units_heuristic(game: &Game) -> HeuristicScore {
 
 pub fn units_health_heuristic(game: &Game) -> HeuristicScore {
     let current_player = game.player();
-    game.units().map(|cell|cell_unit_type_health(cell,&current_player)).sum()
+    game.units().map(|cell|cell_unit_type_health(cell,&current_player,true,true)).sum()
+}
+
+pub fn units_health_friend_heuristic(game: &Game) -> HeuristicScore {
+    let current_player = game.player();
+    game.units().map(|cell|cell_unit_type_health(cell,&current_player,true,false)).sum()
+}
+
+pub fn units_health_opponent_heuristic(game: &Game) -> HeuristicScore {
+    let current_player = game.player();
+    game.units().map(|cell|cell_unit_type_health(cell,&current_player,false,true)).sum()
 }
 
 pub fn units_distance_from_center_row(game: &Game) -> HeuristicScore {
@@ -29,16 +39,16 @@ pub fn units_score_distance_center(game: &Game) -> HeuristicScore {
     units_distance_from_center_row(game)+units_health_heuristic(game)
 }
 
-fn cell_unit_type_health(cell: &BoardCell, current_player: &Player) -> HeuristicScore {
+fn cell_unit_type_health(cell: &BoardCell, current_player: &Player, count_friend: bool, count_opponent: bool) -> HeuristicScore {
     if cell.is_empty() {
         0
     } else {
         let (player, unit) = cell.unit().expect("must call with a cell containing a unit");
         let score = unit_health_score(unit);
         if player == current_player {
-            score
+            if count_friend { score } else { 0 }
         } else {
-            -score
+            if count_opponent { -score } else { 0 }
         }
     }
 }
