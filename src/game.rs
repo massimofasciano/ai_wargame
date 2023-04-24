@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic, DEFAULT_BOARD_DIM, heuristics};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}};
 use anyhow::anyhow;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
 use std::rc::Rc;
@@ -525,7 +525,7 @@ impl Game {
         // println!("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
         score
     }
-    pub fn suggest_action_rec(&self, maximizing_player: bool, player: Player, depth: usize, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
+    pub fn suggest_action_rec(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
         let mut timeout = false;
         if let Some(max_seconds) = self.info.max_seconds {
             let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
@@ -557,7 +557,7 @@ impl Game {
             for possible_action in possible_actions {
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-                let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(!maximizing_player, player, depth+1, start_time);
+                let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(!maximizing_player, player, depth+1, alpha, beta, start_time);
                 total_depth += rec_avg_depth;
                 total_count += 1;
                 // println!("DEBUG: depth={} best={:?} new={:?} new_action={:?}",depth, best_score,score,possible_action);
@@ -575,7 +575,8 @@ impl Game {
     }
     pub fn suggest_action(&self) -> (HeuristicScore, Action, f32, f32) {
         let start_time = SystemTime::now();
-        let (score,suggestion, avg_depth) = self.suggest_action_rec(true, self.player(), 0, start_time);
+        let (score,suggestion, avg_depth) = 
+            self.suggest_action_rec(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
         (score,suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
