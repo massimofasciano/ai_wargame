@@ -94,16 +94,21 @@ impl Game {
             state: GameState::new(dim),
             info: Rc::new(GameInfo::new(dim,drop_prob,max_depth,max_moves,max_seconds,heuristics)),
         };
-        let md = dim-1;
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
         use UnitType::*;
+        let md = dim-1;
+        // let init = vec![
+        //     (0,1,Repair), (0,md-1,Hacker),
+        //     (1,1,Soldier), (1,md-1,Drone),
+        //     (0,3,Hacker), (0,md-3,Repair),
+        //     (1,3,Drone), (1,md-3,Soldier),
+        //     (0,2,AI), (0,md-2,AI),
+        //     (1,2,Tank), (1,md-2,Tank),
+        // ];
+        let mid = dim/2;
         let init = vec![
-            (0,1,Repair), (0,md-1,Hacker),
-            (1,1,Soldier), (1,md-1,Drone),
-            (0,3,Hacker), (0,md-3,Repair),
-            (1,3,Drone), (1,md-3,Soldier),
-            (0,2,AI), (0,md-2,AI),
-            (1,2,Tank), (1,md-2,Tank),
+            (1,1,Drone),    (1,mid-1,Hacker), (1,mid,Tank),     (1,md-1,Soldier),
+                            (0,mid-1,Repair), (0,mid,AI), 
         ];
         assert_eq!(Player::cardinality(),2);
         let mut p_all = Player::all();
@@ -453,18 +458,16 @@ impl Game {
     pub fn units<'a>(&'a self) -> impl Iterator<Item = &BoardCell> + 'a {
         self.state.board.iter_units()
     }
-    pub fn suggest_action(&self) -> Action {
-        let suggestion = self.suggest_action_rec(self.info.max_depth, SystemTime::now()).1;
-        if suggestion.is_some() {
-            suggestion.unwrap()
-        } else {
-            Action::default()
-        }
+    pub fn suggest_action(&self) -> (Action, f32) {
+        let start_time = SystemTime::now();
+        let suggestion = self.suggest_action_rec(0, start_time);
+        let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
+        (suggestion.1.expect("don't know what to do!"),elapsed_seconds)
     }
     pub fn heuristic(&self) -> HeuristicScore {
         let current_player = self.player();
         let result = self.end_game_result();
-        match result {
+        let score = match result {
             Some(Some(winner)) if winner == current_player => HeuristicScore::MAX, // win
             Some(Some(_)) => HeuristicScore::MIN, // lose
             Some(None) => 0, // draw
@@ -476,10 +479,11 @@ impl Game {
                 };
                 heuristic(self)
             }
-        }
+        };
+        score - self.total_moves() as HeuristicScore
     }
-    pub fn suggest_action_rec(&self, depth: Option<usize>, start_time: SystemTime) -> (Option<HeuristicScore>, Option<Action>) {
-        if depth.is_some() && depth.unwrap() == 0 || self.end_game_result().is_some() {
+    pub fn suggest_action_rec(&self, depth: usize, start_time: SystemTime) -> (Option<HeuristicScore>, Option<Action>) {
+        if self.info.max_depth.is_some() && depth >= self.info.max_depth.unwrap() || self.end_game_result().is_some() {
             (Some(self.heuristic()),None)
         } else {
             let mut best_action = None;
@@ -500,11 +504,7 @@ impl Game {
                 }
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-                let mut new_depth = None;
-                if let Some(depth) = depth {
-                    new_depth = Some(depth - 1);
-                }
-                let (score, _) = possible_game.suggest_action_rec(new_depth, start_time);
+                let (score, _) = possible_game.suggest_action_rec(depth+1, start_time);
                 if best_score.is_none() || score.is_some() && score.unwrap() > best_score.unwrap() {
                     best_score = score;
                     best_action = Some(possible_action);
@@ -516,20 +516,18 @@ impl Game {
     pub fn computer_play_turn(&mut self) {
         let mut computer_game = self.clone();
         computer_game.set_drop_prob(None);
-        if let (_,Some(best_action)) = computer_game.suggest_action_rec(self.info.max_depth,SystemTime::now()) {
-            if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
-                println!("# {} {}", player, action);
-                if outcome.is_useful_info() {
-                    println!("# {}", outcome);
-                }
-                if drop_outcome.is_useful_info() {
-                    println!("# {}", drop_outcome);
-                }
-            } else {
-                panic!("play turn should work");
+        let (best_action,elapsed_seconds) = computer_game.suggest_action();
+        if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
+            println!("# {} {}", player, action);
+            if outcome.is_useful_info() {
+                println!("# {}", outcome);
             }
+            if drop_outcome.is_useful_info() {
+                println!("# {}", drop_outcome);
+            }
+            println!("# Compute time: {:.1} sec", elapsed_seconds);
         } else {
-            panic!("don't know what to do!");
+            panic!("play turn should work");
         }
     }
 }

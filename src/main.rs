@@ -4,7 +4,7 @@ fn main() {
     let dim = DEFAULT_BOARD_DIM;
     let drop_prob = None;
     // let drop_prob = Some(0.005);
-    let max_depth = Some(4);
+    let max_depth = Some(5);
     let max_moves = Some(150);
     let max_seconds = Some(1.0);
     let attacker_heuristic = units_health_opponent_heuristic;
@@ -51,8 +51,9 @@ fn main() {
 
         } else {
 
-            let suggestion = game.suggest_action();
+            let (suggestion,elapsed_seconds) = game.suggest_action();
             println!("Suggestion: {}",suggestion);
+            println!("Compute time: {:.1} sec",elapsed_seconds);
             if let Some((from,to)) = game.parse_move_stdin() {
                 game.console_play_turn(from, to);
             } else {
