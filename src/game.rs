@@ -39,14 +39,14 @@ pub struct GameInfo {
     heuristics: GameHeuristics,
 }
 
+impl GameInfo {
+    fn new(dim: Dim, drop_prob: Option<f32>, max_depth: usize, heuristics: GameHeuristics) -> Self {
+        Self { dim, drop_prob, max_depth, heuristics }
+    }
+}
 impl Default for GameInfo {
     fn default() -> Self {
-        Self {
-            dim: DEFAULT_BOARD_DIM, 
-            drop_prob: None,
-            max_depth: DEFAULT_MAX_DEPTH,
-            heuristics: Default::default()
-        }
+        Self::new(DEFAULT_BOARD_DIM,None,DEFAULT_MAX_DEPTH,Default::default())
     }
 }
 
@@ -56,12 +56,14 @@ pub struct GameHeuristics {
     defender: Heuristic,
 }
 
+impl GameHeuristics {
+    fn new(attacker: Heuristic, defender: Heuristic) -> Self {
+        Self { attacker, defender }
+    }
+}
 impl Default for GameHeuristics {
     fn default() -> Self {
-        Self {
-            attacker: DEFAULT_HEURISTIC,
-            defender: DEFAULT_HEURISTIC,
-        }
+        Self::new(DEFAULT_HEURISTIC,DEFAULT_HEURISTIC)
     }
 }
 
@@ -79,17 +81,10 @@ impl Default for Game {
 
 impl Game {
     pub fn new(dim: Dim, attacker_heuristic: Heuristic, defender_heuristic: Heuristic, drop_prob: Option<f32>, max_depth: usize) -> Self {
+        let heuristics = GameHeuristics::new(attacker_heuristic,defender_heuristic);
         let mut game = Self {
             state: GameState::new(dim),
-            info: Rc::new(GameInfo { 
-                dim,
-                drop_prob,
-                max_depth,
-                heuristics: GameHeuristics {
-                    attacker: attacker_heuristic,
-                    defender: defender_heuristic,
-                },
-            }),
+            info: Rc::new(GameInfo::new(dim,drop_prob,max_depth,heuristics)),
         };
         let md = dim-1;
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
