@@ -4,7 +4,7 @@ fn main() {
     #[cfg(feature="rayon")]
     rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
     // let dim = ai_wargame::DEFAULT_BOARD_DIM;
-    let dim = 5;
+    let dim = 7;
     let drop_prob = None;
     // let drop_prob = Some(0.005);
     let max_depth = Some(8);
@@ -13,8 +13,8 @@ fn main() {
     let attacker_heuristic = heuristics::ai_distance_units_health_heuristic;
     // let attacker_heuristic = heuristics::units_health_opponent_heuristic;
     // let attacker_heuristic = heuristics::units_health_heuristic;
-    let defender_heuristic = heuristics::ai_distance_units_health_heuristic;
-    // let defender_heuristic = heuristics::units_health_heuristic;
+    // let defender_heuristic = heuristics::ai_distance_units_health_heuristic;
+    let defender_heuristic = heuristics::units_health_heuristic;
     // let attacker_heuristic = heuristics::units_heuristic;
     // let defender_heuristic = heuristics::units_heuristic;
     let mut game = Game::new(dim,attacker_heuristic,defender_heuristic,drop_prob,max_depth,max_moves,max_seconds);

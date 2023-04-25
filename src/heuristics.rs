@@ -22,26 +22,16 @@ pub fn ai_distance_heuristic(game: &Game, player : Player) -> HeuristicScore {
     game.unit_coord_pairs().map(|pair| {
         let from_cell = game.get_cell(pair.from).expect("valid coord");
         let from_player = from_cell.player().expect("not empty");
+        let from_unit_type = from_cell.unit().expect("not empty").unit_type;
         let to_cell = game.get_cell(pair.to).expect("valid coord");
         let to_player = to_cell.player().expect("not empty");
         let to_unit_type = to_cell.unit().expect("not empty").unit_type;
         let dist = pair.moves_distance() as HeuristicScore;
-        if from_player == player && to_player != player && to_unit_type == UnitType::AI {
-            if dist < 5 {
-                // we want our units as close to opposing AI as possible
-                dist
-            } else {
-                // don't count those that are too far as much
-                dist/4
-            }
-        } else if from_player != player && to_player == player && to_unit_type == UnitType::AI {
-            if dist < 5 {
-                // we want opposing units as far to our AI as possible
-                -dist
-            } else {
-                // don't count those that are too far as much
-                -dist/4
-            }
+        if from_player == player && to_player != player && 
+            from_unit_type != UnitType::AI && from_unit_type != UnitType::Repair && to_unit_type == UnitType::AI {
+            -dist/2
+        } else if from_player == player && to_player == player && from_unit_type == UnitType::Repair && to_unit_type == UnitType::AI {
+            -dist/2
         } else {
             0
         }
