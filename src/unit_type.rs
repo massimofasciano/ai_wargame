@@ -19,7 +19,7 @@ impl UnitType {
         use UnitType::*;
         match self {
             AI => 50,
-            Hacker => 10,
+            Hacker => 15,
             Repair => 20,
             Tank => 10,
             Drone => 10,

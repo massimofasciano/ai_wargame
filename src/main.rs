@@ -7,7 +7,7 @@ fn main() {
     let dim = 7;
     let drop_prob = None;
     // let drop_prob = Some(0.005);
-    let max_depth = Some(8);
+    let max_depth = Some(6);
     let max_moves = Some(150);
     let max_seconds = Some(5.0);
     let attacker_heuristic = heuristics::ai_distance_units_health_heuristic;

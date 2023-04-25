@@ -377,15 +377,22 @@ impl Game {
             let (player_source,unit_source) = source.unit_mut().unwrap();
             let (player_target,unit_target) = target.unit_mut().unwrap();
             if player_source != player_target {
-                // // it's an opposing unit so we try to damage it (it will damage us back)
-                // let damage_to_target = unit_source.apply_damage(unit_target);
-                // let damage_to_source = unit_target.apply_damage(unit_source);
-                // self.remove_dead(from);
-                // self.remove_dead(to);
-                // it's an opposing unit so we try to damage it (no return damage)
+                //
+                // this section is for mutual damage....
+                //
+                // it's an opposing unit so we try to damage it (it will damage us back)
                 let damage_to_target = unit_source.apply_damage(unit_target);
-                let damage_to_source = 0;
+                let damage_to_source = unit_target.apply_damage(unit_source);
+                self.remove_dead(from);
                 self.remove_dead(to);
+                //
+                // this section is for no return damage....
+                //
+                // it's an opposing unit so we try to damage it (no return damage)
+                // let damage_to_target = unit_source.apply_damage(unit_target);
+                // let damage_to_source = 0;
+                // self.remove_dead(to);
+                //
                 Ok(ActionOutcome::Damaged { to_source: damage_to_source, to_target: damage_to_target })
             } else {
                 Err(anyhow!("can't attack friendly units"))
@@ -525,8 +532,7 @@ impl Game {
                 } else {
                     self.info.heuristics.defender
                 };
-                // we subtract moves to make later states of equal value worse
-                heuristic(self,player) - moves
+                heuristic(self,player)
             }
         };
         // println!("score: {}",score);
