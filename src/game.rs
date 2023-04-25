@@ -1,13 +1,14 @@
 use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}};
 use anyhow::anyhow;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
-use std::rc::Rc;
-use std::time::SystemTime;
+use std::{time::SystemTime, sync::Arc};
+#[cfg(feature="rayon")]
+use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct Game {
     state: GameState,
-    info: Rc<GameInfo>,
+    info: Arc<GameInfo>,
 }
 
 #[derive(Debug, Clone)]
@@ -92,7 +93,7 @@ impl Game {
         let heuristics = GameHeuristics::new(attacker_heuristic,defender_heuristic);
         let mut game = Self {
             state: GameState::new(dim),
-            info: Rc::new(GameInfo::new(dim,drop_prob,max_depth,max_moves,max_seconds,heuristics)),
+            info: Arc::new(GameInfo::new(dim,drop_prob,max_depth,max_moves,max_seconds,heuristics)),
         };
         // assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
         use UnitType::*;
@@ -129,7 +130,7 @@ impl Game {
     pub fn set_drop_prob(&mut self, drop_prob: Option<f32>) {
         let mut info = self.info.as_ref().clone();
         info.drop_prob = drop_prob;
-        self.info = Rc::new(info);
+        self.info = Arc::new(info);
     }
     pub fn remove_cell(&mut self, coord: Coord) -> Option<BoardCell> {
         if self.is_valid_position(coord) {
@@ -582,10 +583,58 @@ impl Game {
             }
         }
     }
+    #[cfg(feature="rayon")]
+    pub fn suggest_action_rec_par(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
+        let mut best_action = None;
+        let mut best_score;
+        let mut total_depth = 0.0;
+        let mut total_count = 0;
+        let possible_actions = self.player_unit_coords(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "rand-actions")] {
+                let mut possible_actions = possible_actions.collect::<Vec<_>>();
+                let mut rng = rand::thread_rng();
+                possible_actions.shuffle(&mut rng);
+            } else {
+            }
+        }
+        if maximizing_player {
+            best_score = heuristics::MIN_HEURISTIC_SCORE;
+        } else {
+            best_score = heuristics::MAX_HEURISTIC_SCORE;
+        }
+        let possible_games = possible_actions.par_iter().map(|&possible_action|{
+            let mut possible_game = self.clone();
+            possible_game.play_turn_from_action(possible_action).expect("action should be valid");
+            (possible_game,possible_action)
+        });
+        let possible_rec = possible_games.map(|(possible_game,possible_action)| {
+            (possible_game.suggest_action_rec(!maximizing_player, player, depth+1, alpha, beta, start_time),
+            possible_action)
+        });
+        for ((score, _, rec_avg_depth),possible_action) in possible_rec.collect::<Vec<_>>() {
+            total_depth += rec_avg_depth;
+            total_count += 1;
+            // println!("DEBUG: depth={} best={:?} new={:?} new_action={:?}",depth, best_score,score,possible_action);
+            if maximizing_player && score > best_score || !maximizing_player && score < best_score {
+                best_score = score;
+                best_action = Some(possible_action);
+            }
+        }
+        if total_count == 0 {
+            (best_score, best_action, depth as f32)
+        } else {
+            (best_score, best_action, total_depth / total_count as f32)
+        }
+    }
     pub fn suggest_action(&self) -> (HeuristicScore, Action, f32, f32) {
         let start_time = SystemTime::now();
+        #[cfg(not(feature="rayon"))]
         let (score,suggestion, avg_depth) = 
             self.suggest_action_rec(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
+        #[cfg(feature="rayon")]
+        let (score,suggestion, avg_depth) = 
+            self.suggest_action_rec_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
         (score,suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
