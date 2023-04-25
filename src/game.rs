@@ -554,6 +554,8 @@ impl Game {
             } else {
                 best_score = heuristics::MAX_HEURISTIC_SCORE;
             }
+            let mut alpha = alpha;
+            let mut beta = beta;
             for possible_action in possible_actions {
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
@@ -564,6 +566,13 @@ impl Game {
                 if maximizing_player && score > best_score || !maximizing_player && score < best_score {
                     best_score = score;
                     best_action = Some(possible_action);
+                }
+                if maximizing_player {
+                    if best_score > beta { break; }
+                    alpha = std::cmp::max(alpha, best_score);
+                } else {
+                    if best_score < alpha { break; }
+                    beta = std::cmp::min(beta, best_score);
                 }
             }
             if total_count == 0 {
