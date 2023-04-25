@@ -108,12 +108,9 @@ impl Game {
         // ];
         let mid = dim/2;
         let init = vec![
-            (1,1,Drone),    (1,mid-1,Hacker), (1,mid,Tank),     (1,md-1,Soldier),
-                            (0,mid-1,Repair), (0,mid,AI), 
+            (1,mid-2,Drone),    (1,mid-1,Tank), (1,mid,Hacker), (1,mid+1,Repair),   (1,mid+2,Soldier),
+                                                (0,mid,AI), 
         ];
-        // let init = vec![
-        //                     (0,mid,AI), 
-        // ];
         assert_eq!(Player::cardinality(),2);
         let mut p_all = Player::all();
         let p1 = p_all.next().unwrap();
@@ -130,6 +127,11 @@ impl Game {
     pub fn set_drop_prob(&mut self, drop_prob: Option<f32>) {
         let mut info = self.info.as_ref().clone();
         info.drop_prob = drop_prob;
+        self.info = Arc::new(info);
+    }
+    pub fn set_max_depth(&mut self, max_depth: Option<usize>) {
+        let mut info = self.info.as_ref().clone();
+        info.max_depth = max_depth;
         self.info = Arc::new(info);
     }
     pub fn remove_cell(&mut self, coord: Coord) -> Option<BoardCell> {
@@ -462,6 +464,12 @@ impl Game {
         } else {
             println!("{} moves played",self.total_moves());
         }
+        if let Some(max_depth) = self.info.max_depth {
+            println!("Max search depth: {}",max_depth);
+        }
+        if let Some(max_seconds) = self.info.max_seconds {
+            println!("Max search time: {:.1} sec",max_seconds);
+        }
         println!("Next player: {}",self.player());
         print!("    ");
         for col in 0..self.dim() {
@@ -585,8 +593,9 @@ impl Game {
     }
     #[cfg(feature="rayon")]
     pub fn suggest_action_rec_par(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
+        assert_eq!(maximizing_player,true,"call only at top level");
         let mut best_action = None;
-        let mut best_score;
+        let mut best_score = heuristics::MIN_HEURISTIC_SCORE;
         let mut total_depth = 0.0;
         let mut total_count = 0;
         let possible_actions = self.player_unit_coords(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
@@ -596,27 +605,20 @@ impl Game {
                 let mut rng = rand::thread_rng();
                 possible_actions.shuffle(&mut rng);
             } else {
+                let possible_actions = possible_actions.collect::<Vec<_>>();
             }
-        }
-        if maximizing_player {
-            best_score = heuristics::MIN_HEURISTIC_SCORE;
-        } else {
-            best_score = heuristics::MAX_HEURISTIC_SCORE;
         }
         let possible_games = possible_actions.par_iter().map(|&possible_action|{
             let mut possible_game = self.clone();
             possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-            (possible_game,possible_action)
-        });
-        let possible_rec = possible_games.map(|(possible_game,possible_action)| {
-            (possible_game.suggest_action_rec(!maximizing_player, player, depth+1, alpha, beta, start_time),
-            possible_action)
-        });
-        for ((score, _, rec_avg_depth),possible_action) in possible_rec.collect::<Vec<_>>() {
+            let suggest = possible_game.suggest_action_rec(!maximizing_player, player, depth+1, alpha, beta, start_time);
+            (suggest,possible_action)
+        }).collect::<Vec<_>>();
+        for ((score, _, rec_avg_depth),possible_action) in possible_games {
             total_depth += rec_avg_depth;
             total_count += 1;
             // println!("DEBUG: depth={} best={:?} new={:?} new_action={:?}",depth, best_score,score,possible_action);
-            if maximizing_player && score > best_score || !maximizing_player && score < best_score {
+            if score > best_score {
                 best_score = score;
                 best_action = Some(possible_action);
             }
@@ -627,7 +629,7 @@ impl Game {
             (best_score, best_action, total_depth / total_count as f32)
         }
     }
-    pub fn suggest_action(&self) -> (HeuristicScore, Action, f32, f32) {
+    pub fn suggest_action(&mut self) -> (HeuristicScore, Action, f32, f32) {
         let start_time = SystemTime::now();
         #[cfg(not(feature="rayon"))]
         let (score,suggestion, avg_depth) = 
@@ -638,10 +640,18 @@ impl Game {
         let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
         (score,suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
+    pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
+        if self.info.max_depth.is_some() && avg_depth < self.info.max_depth.unwrap() as f32 * 0.9 {
+            self.set_max_depth(Some(self.info.max_depth.unwrap()-1));
+        } else if self.info.max_depth.is_some() && self.info.max_seconds.is_some() && elapsed_seconds < self.info.max_seconds.unwrap() * 0.25 {
+            self.set_max_depth(Some(self.info.max_depth.unwrap()+1));
+        }
+    }
     pub fn computer_play_turn(&mut self) {
         let mut computer_game = self.clone();
         computer_game.set_drop_prob(None);
         let (score,best_action,elapsed_seconds,avg_depth) = computer_game.suggest_action();
+        self.adjust_max_depth(elapsed_seconds, avg_depth);
         if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
             println!("# {} {}", player, action);
             if outcome.is_useful_info() {

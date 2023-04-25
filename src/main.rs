@@ -4,10 +4,10 @@ fn main() {
     #[cfg(feature="rayon")]
     rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
     // let dim = ai_wargame::DEFAULT_BOARD_DIM;
-    let dim = 6;
+    let dim = 5;
     let drop_prob = None;
     // let drop_prob = Some(0.005);
-    let max_depth = Some(7);
+    let max_depth = Some(8);
     let max_moves = Some(150);
     let max_seconds = Some(5.0);
     let attacker_heuristic = heuristics::ai_distance_units_health_heuristic;

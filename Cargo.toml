@@ -1,6 +1,6 @@
 [package]
 name = "ai_wargame"
-version = "0.7.1"
+version = "0.7.3"
 edition = "2021"
 
 [dependencies]
@@ -24,6 +24,7 @@ codegen-units = 1
 
 [features]
 default = ["rand-actions", "board_map"]
+#default = ["board_map", "rayon"]
 #default = ["rand-actions", "board_map", "rayon"]
 #default = ["rand-actions", "board_array"]
 #default = ["rand-actions", "board_vec"]
