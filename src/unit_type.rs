@@ -4,12 +4,11 @@ use crate::{DisplayFirstLetter, Health, HeuristicScore};
 #[derive(derive_more::Display)]
 pub enum UnitType {
     AI,
-    Hacker,
-    Repair,
-    Tank,
-    Drone,
+    Virus,
+    Tech,
+    Firewall,
     #[default]
-    Soldier,
+    Program,
 }
 
 impl DisplayFirstLetter for UnitType {}
@@ -19,87 +18,70 @@ impl UnitType {
         use UnitType::*;
         match self {
             AI => 50,
-            Hacker => 15,
-            Repair => 20,
-            Tank => 10,
-            Drone => 10,
-            Soldier => 10,
+            Virus => 20,
+            Tech => 20,
+            Firewall => 10,
+            Program => 10,
         }
     }
     pub fn initial_health(&self) -> Health {
-        use UnitType::*;
-        match self {
-            AI => 5,
-            Hacker => 3,
-            Repair => 2,
-            Tank => 8,
-            Drone => 6,
-            Soldier => 4,
-        }
+        9
     }
     pub fn damage_amount(&self, target: &Self) -> Health {
         use UnitType::*;
         match self {
             AI => match target {
                 AI => 1,
-                Hacker => 1,
-                Repair => 1,
-                Tank => 3,
-                Drone => 3,
-                Soldier => 3,
+                Virus => 4,
+                Tech => 2,
+                Firewall => 1,
+                Program => 2,
             },
-            Hacker => match target {
-                AI => 5,
-                Hacker => 1,
-                Repair => 1,
-                Tank => 1,
-                Drone => 1,
-                Soldier => 1,
+            Virus => match target {
+                AI => 8,
+                Virus => 1,
+                Tech => 3,
+                Firewall => 1,
+                Program => 4,
             },
-            Repair => match target {
-                AI => 0,
-                Hacker => 1,
-                Repair => 1,
-                Tank => 0,
-                Drone => 0,
-                Soldier => 0,
+            Tech => match target {
+                AI => 3,
+                Virus => 7,
+                Tech => 1,
+                Firewall => 1,
+                Program => 1,
             },
-            Tank => match target {
+            Firewall => match target {
                 AI => 1,
-                Hacker => 1,
-                Repair => 1,
-                Tank => 2,
-                Drone => 2,
-                Soldier => 4,
+                Virus => 1,
+                Tech => 1,
+                Firewall => 1,
+                Program => 1,
             },
-            Drone => match target {
-                AI => 1,
-                Hacker => 1,
-                Repair => 1,
-                Tank => 8,
-                Drone => 2,
-                Soldier => 1,
-            },
-            Soldier => match target {
+            Program => match target {
                 AI => 2,
-                Hacker => 2,
-                Repair => 1,
-                Tank => 2,
-                Drone => 6,
-                Soldier => 2,
+                Virus => 2,
+                Tech => 2,
+                Firewall => 1,
+                Program => 3,
             },
         }
     }
     pub fn repair_amount(&self, target: &Self) -> Health {
         use UnitType::*;
         match self {
-            Repair => match target {
-                AI => 3,
-                Hacker => 1,
-                Repair => 2,
-                Tank => 1,
-                Drone => 1,
-                Soldier => 1,
+            Tech => match target {
+                AI => 5,
+                Virus => 1,
+                Tech => 1,
+                Firewall => 3,
+                Program => 2,
+            },
+            AI  => match target {
+                Virus => 1,
+                Firewall => 1,
+                Program => 1,
+                _ => 0,
             },
             _ => 0,
         }

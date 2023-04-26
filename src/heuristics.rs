@@ -29,10 +29,10 @@ pub fn ai_distance_heuristic(game: &Game, player : Player) -> HeuristicScore {
         let to_unit_type = to_cell.unit().expect("not empty").unit_type;
         let dist = pair.moves_distance() as HeuristicScore;
         if from_player == player && to_player != player && 
-            from_unit_type != UnitType::AI && from_unit_type != UnitType::Repair && to_unit_type == UnitType::AI {
+            from_unit_type != UnitType::AI && from_unit_type != UnitType::Tech && to_unit_type == UnitType::AI {
             -dist * from_unit_type.damage_amount(&to_unit_type) as HeuristicScore
         } else if from_player != player && to_player == player && 
-            from_unit_type != UnitType::AI && from_unit_type != UnitType::Repair && to_unit_type == UnitType::AI {
+            from_unit_type != UnitType::AI && from_unit_type != UnitType::Tech && to_unit_type == UnitType::AI {
             dist * from_unit_type.damage_amount(&to_unit_type) as HeuristicScore / 2
         } else {
             0
@@ -82,7 +82,7 @@ fn cell_unit_type(cell: &BoardCell, current_player: &Player) -> HeuristicScore {
         0
     } else {
         let (player, unit) = cell.player_unit().expect("must call with a cell containing a unit");
-        let score = unit_score(unit);
+        let score = unit.unit_type.score();
         if player == current_player {
             score
         } else {
@@ -93,15 +93,7 @@ fn cell_unit_type(cell: &BoardCell, current_player: &Player) -> HeuristicScore {
 
 fn unit_health_score(unit: &Unit) -> HeuristicScore {
     // health*value with bias (so that keeping units alive is better)
-    unit_type_score(&unit.unit_type)*(unit.health+3) as HeuristicScore
-}
-
-fn unit_score(unit: &Unit) -> HeuristicScore {
-    unit_type_score(&unit.unit_type)
-}
-
-fn unit_type_score(unit_type: &UnitType) -> HeuristicScore {
-    unit_type.score()
+    unit.unit_type.score()*(unit.health+3) as HeuristicScore
 }
 
 //

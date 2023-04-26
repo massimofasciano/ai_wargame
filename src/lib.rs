@@ -21,9 +21,9 @@ pub use actions::{Action, ActionOutcome, DropOutcome, IsUsefulInfo};
 pub use heuristics::{Heuristic,HeuristicScore};
 
 const MAX_HEALTH : Health = 9;
-pub const DEFAULT_BOARD_DIM : Dim = 8;
-pub const DEFAULT_MAX_DEPTH : usize = 3;
-pub const DEFAULT_HEURISTIC : Heuristic = heuristics::zero_heuristic;
+pub const DEFAULT_BOARD_DIM : Dim = 5;
+pub const DEFAULT_MAX_DEPTH : usize = 6;
+pub const DEFAULT_HEURISTIC : Heuristic = heuristics::units_health_heuristic;
 
 trait DisplayFirstLetter : std::fmt::Display {
     fn to_first_letter(&self) -> char {

@@ -95,21 +95,12 @@ impl Game {
             state: GameState::new(dim),
             info: Arc::new(GameInfo::new(dim,drop_prob,max_depth,max_moves,max_seconds,heuristics)),
         };
-        // assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
+        assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
         use UnitType::*;
-        let md = dim-1;
-        // let init = vec![
-        //     (0,1,Repair), (0,md-1,Hacker),
-        //     (1,1,Soldier), (1,md-1,Drone),
-        //     (0,3,Hacker), (0,md-3,Repair),
-        //     (1,3,Drone), (1,md-3,Soldier),
-        //     (0,2,AI), (0,md-2,AI),
-        //     (1,2,Tank), (1,md-2,Tank),
-        // ];
-        let mid = dim/2;
         let init = vec![
-            (1,mid-2,Drone),    (1,mid-1,Tank), (1,mid,Hacker), (1,mid+1,Repair),   (1,mid+2,Soldier),
-                                                (0,mid,AI), 
+            (0,0,AI),(0,1,Virus),(0,2,Program),
+            (1,0,Tech),(1,1,Firewall),
+            (2,0,Program),
         ];
         assert_eq!(Player::cardinality(),2);
         let mut p_all = Player::all();
@@ -117,7 +108,7 @@ impl Game {
         let p2 = p_all.next().unwrap();
         for (row,col,unit_type) in init {
             game.set_cell((row,col),BoardCell::new_unit(p2, unit_type));
-            game.set_cell((md-row,col),BoardCell::new_unit(p1, unit_type));
+            game.set_cell((dim-1-row,dim-1-col),BoardCell::new_unit(p1, unit_type));
         }
         game
     }
@@ -302,7 +293,7 @@ impl Game {
     pub fn random_drop(&mut self) -> DropOutcome {
         let mut rng = rand::thread_rng();
         if self.info.drop_prob.is_some() && rng.gen::<f32>() < self.info.drop_prob.unwrap() {
-            let unit_type = *[UnitType::Hacker,UnitType::Repair].choose(&mut rng).expect("expect a hacker or repair");
+            let unit_type = *[UnitType::Virus,UnitType::Tech].choose(&mut rng).expect("expect a hacker or repair");
             if let Some(empty_coord) = self.empty_coords().choose(&mut rng) {
                 self.set_cell(empty_coord, BoardCell::new_unit(self.player(), unit_type));
                 DropOutcome::Drop {location:empty_coord, unit_type: unit_type}

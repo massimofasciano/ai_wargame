@@ -3,12 +3,11 @@ use ai_wargame::{Game, heuristics};
 fn main() {
     #[cfg(feature="rayon")]
     rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
-    // let dim = ai_wargame::DEFAULT_BOARD_DIM;
-    let dim = 7;
+    let dim = ai_wargame::DEFAULT_BOARD_DIM;
     let drop_prob = None;
     // let drop_prob = Some(0.005);
     let max_depth = Some(6);
-    let max_moves = Some(150);
+    let max_moves = Some(100);
     let max_seconds = Some(5.0);
     let attacker_heuristic = heuristics::ai_distance_units_health_heuristic;
     // let attacker_heuristic = heuristics::units_health_opponent_heuristic;
