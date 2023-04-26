@@ -1,23 +1,24 @@
-use ai_wargame::{Game, heuristics};
+use ai_wargame::{Game, heuristics, GameOptions};
 
 fn main() {
     #[cfg(feature="rayon")]
     rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
-    let dim = ai_wargame::DEFAULT_BOARD_DIM;
-    let drop_prob = None;
-    // let drop_prob = Some(0.005);
-    let max_depth = Some(6);
-    let max_moves = Some(100);
-    let max_seconds = Some(5.0);
-    let attacker_heuristic = heuristics::ai_distance_units_health_heuristic;
-    // let attacker_heuristic = heuristics::units_health_opponent_heuristic;
-    // let attacker_heuristic = heuristics::units_health_heuristic;
-    // let defender_heuristic = heuristics::ai_distance_units_health_heuristic;
-    let defender_heuristic = heuristics::units_health_heuristic;
-    // let attacker_heuristic = heuristics::units_heuristic;
-    // let defender_heuristic = heuristics::units_heuristic;
-    let mut game = Game::new(dim,attacker_heuristic,defender_heuristic,drop_prob,max_depth,max_moves,max_seconds);
-    let play_alone = std::env::args().len() > 1;
+    let cmd_opt = std::env::args().nth(1);
+
+    let mut options = GameOptions::default();
+    options.dim = 4;
+    options.max_depth = Some(6);
+    options.max_moves = Some(100);
+    options.max_seconds = Some(5.0);
+    options.heuristics.attacker = heuristics::ai_distance_units_health_heuristic;
+    options.heuristics.defender = heuristics::units_health_heuristic;
+    // options.mutual_damage = true;
+    // options.debug = true;
+    if cmd_opt == Some(String::from("auto")) {
+        options.debug = true;
+    }
+        
+    let mut game = Game::new(options);
 
     loop {
         println!();
@@ -26,57 +27,23 @@ fn main() {
 
         if let Some(winner) = game.end_game_result() {
             println!("{} wins in {} moves!", winner, game.total_moves());
-            // println!("{:#?}",game);
             break;
         }
 
-        // for coord in game.player_coords(game.player()) {
-        //     println!("% Possible actions for {} :",coord);
-        //     for action in game.possible_actions_from_coord(coord) {
-        //         println!("% - {}",action);
-        //     }
-        // }
-
-        if play_alone {
-
-            // loop {
-            //     use rand::Rng;
-            //     let mut rng = rand::thread_rng();
-            //     let md = game.dim();
-            //     let from = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
-            //     let to = Coord::new(rng.gen_range(0..md), rng.gen_range(0..md));
-            //     if game.console_play_turn(from, to) {
-            //         break;
-            //     }
-            // }
-
+        if cmd_opt == Some(String::from("auto")) {
+            // computer plays both sides...
             game.computer_play_turn();
-
         } else {
-
-            // let (score, suggestion,elapsed_seconds,avg_depth) = game.suggest_action();
-            // println!("Suggestion: {}",suggestion);
-            // println!("Compute time: {:.1} sec",elapsed_seconds);
-            // println!("Average depth: {:.1}", avg_depth);
-            // println!("# Score: {}", score);
-            loop {
-                if let Some((from,to)) = game.parse_move_stdin() {
-                    if game.console_play_turn(from, to) {
-                        break;
-                    } else {
-                        println!("Invalid move!");
-                    }
-                } else {
-                    println!("Invalid input!");
-                }
-            }
-
-            println!();
-            game.pretty_print();
-            println!();
-  
+            // make a quick suggestion...
+            game.console_quick_suggestion();
+            // human plays...
+            game.console_play_turn_stdin();
+            // show intermediate board state...
+            // println!();
+            // game.pretty_print();
+            // println!();
+            // computer plays...
             game.computer_play_turn();
-
         }
     }
 }

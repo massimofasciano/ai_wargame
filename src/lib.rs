@@ -12,7 +12,7 @@ pub mod heuristics;
 type Dim = i8;
 pub use coord::{Coord, CoordPair, CoordTuple};
 type Health = u8;
-pub use game::Game;
+pub use game::{Game,GameOptions};
 pub use board::Board;
 pub use cell::{BoardCell,BoardCellData};
 pub use unit_type::UnitType;

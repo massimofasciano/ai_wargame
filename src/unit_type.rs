@@ -27,60 +27,52 @@ impl UnitType {
     pub fn initial_health(&self) -> Health {
         9
     }
+    pub fn units_description() -> String {
+        String::from("\
+            repair 1 (Tech => AI,Firewall,Program)\n\
+            repair 3 (AI => Virus,Tech)\n\
+            damage 9 (Virus => AI)\n\
+            damage 6 (Virus => Tech,Program) (Tech => Virus)\n\
+            damage 3 (AI,Program => any unit except Firewall)\n\
+            damage 1 (any unit => Firewall)\n\
+        ")
+    }
     pub fn damage_amount(&self, target: &Self) -> Health {
+        // update description when changing any value
         use UnitType::*;
         match self {
             AI => match target {
-                AI => 1,
-                Virus => 4,
-                Tech => 2,
                 Firewall => 1,
-                Program => 2,
+                _ => 3,
             },
             Virus => match target {
-                AI => 8,
-                Virus => 1,
-                Tech => 3,
-                Firewall => 1,
-                Program => 4,
+                AI => 9,
+                Tech | Program => 6,
+                Virus | Firewall => 1,
             },
             Tech => match target {
-                AI => 3,
-                Virus => 7,
-                Tech => 1,
-                Firewall => 1,
-                Program => 1,
+                Virus => 6,
+                _ => 1,
             },
             Firewall => match target {
-                AI => 1,
-                Virus => 1,
-                Tech => 1,
-                Firewall => 1,
-                Program => 1,
+                _ => 1,
             },
             Program => match target {
-                AI => 2,
-                Virus => 2,
-                Tech => 2,
                 Firewall => 1,
-                Program => 3,
+                _ => 3,
             },
         }
     }
     pub fn repair_amount(&self, target: &Self) -> Health {
+        // update description when changing any value
         use UnitType::*;
         match self {
             Tech => match target {
-                AI => 5,
-                Virus => 1,
-                Tech => 1,
-                Firewall => 3,
-                Program => 2,
+                AI | Firewall | Program => 3,
+                _ => 0,
             },
             AI  => match target {
-                Virus => 1,
-                Firewall => 1,
-                Program => 1,
+                Virus | Tech => 1,
                 _ => 0,
             },
             _ => 0,

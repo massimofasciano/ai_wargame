@@ -1,5 +1,6 @@
 use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}};
 use anyhow::anyhow;
+use smart_default::SmartDefault;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
 use std::{time::SystemTime, sync::Arc};
 #[cfg(feature="rayon")]
@@ -8,7 +9,7 @@ use rayon::prelude::*;
 #[derive(Debug, Clone)]
 pub struct Game {
     state: GameState,
-    info: Arc<GameInfo>,
+    options: Arc<GameOptions>,
 }
 
 #[derive(Debug, Clone)]
@@ -33,33 +34,24 @@ impl Default for GameState {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct GameInfo {
-    dim: Dim,
-    drop_prob: Option<f32>,
-    max_depth: Option<usize>,
-    max_moves: Option<usize>,
-    max_seconds: Option<f32>,
-    heuristics: GameHeuristics,
-}
-
-impl GameInfo {
-    fn new(dim: Dim, drop_prob: Option<f32>, max_depth: Option<usize>, max_moves: Option<usize>, 
-            max_seconds: Option<f32>, heuristics: GameHeuristics) -> Self 
-    {
-        Self { dim, drop_prob, max_depth, max_moves, max_seconds, heuristics }
-    }
-}
-impl Default for GameInfo {
-    fn default() -> Self {
-        Self::new(DEFAULT_BOARD_DIM,None,Some(DEFAULT_MAX_DEPTH),None,None,Default::default())
-    }
+#[derive(Debug, Clone, SmartDefault)]
+pub struct GameOptions {
+    #[default(DEFAULT_BOARD_DIM)]
+    pub dim: Dim,
+    pub drop_prob: Option<f32>,
+    #[default(Some(DEFAULT_MAX_DEPTH))]
+    pub max_depth: Option<usize>,
+    pub max_moves: Option<usize>,
+    pub max_seconds: Option<f32>,
+    pub heuristics: GameHeuristics,
+    pub mutual_damage: bool,
+    pub debug : bool,
 }
 
 #[derive(Clone)]
 pub struct GameHeuristics {
-    attacker: Heuristic,
-    defender: Heuristic,
+    pub attacker: Heuristic,
+    pub defender: Heuristic,
 }
 
 impl GameHeuristics {
@@ -81,19 +73,17 @@ impl std::fmt::Debug for GameHeuristics {
 
 impl Default for Game {
     fn default() -> Self {
-        Self::new(DEFAULT_BOARD_DIM, DEFAULT_HEURISTIC, DEFAULT_HEURISTIC, 
-            None, Some(DEFAULT_MAX_DEPTH),None,None)
+        Self::new(Default::default())
     }
 }
 
 impl Game {
-    pub fn new(dim: Dim, attacker_heuristic: Heuristic, defender_heuristic: Heuristic, 
-            drop_prob: Option<f32>, max_depth: Option<usize>, max_moves: Option<usize>, max_seconds: Option<f32>) -> Self 
+    pub fn new(options: GameOptions) -> Self 
     {
-        let heuristics = GameHeuristics::new(attacker_heuristic,defender_heuristic);
+        let dim = options.dim;
         let mut game = Self {
             state: GameState::new(dim),
-            info: Arc::new(GameInfo::new(dim,drop_prob,max_depth,max_moves,max_seconds,heuristics)),
+            options: Arc::new(options),
         };
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
         use UnitType::*;
@@ -113,17 +103,13 @@ impl Game {
         game
     }
     pub fn dim(&self) -> Dim {
-        self.info.dim
+        self.options.dim
     }
-    pub fn set_drop_prob(&mut self, drop_prob: Option<f32>) {
-        let mut info = self.info.as_ref().clone();
-        info.drop_prob = drop_prob;
-        self.info = Arc::new(info);
+    pub fn options(&self) -> GameOptions {
+        self.options.as_ref().clone()
     }
-    pub fn set_max_depth(&mut self, max_depth: Option<usize>) {
-        let mut info = self.info.as_ref().clone();
-        info.max_depth = max_depth;
-        self.info = Arc::new(info);
+    pub fn set_options(&mut self, options: GameOptions) {
+        self.options = Arc::new(options);
     }
     pub fn remove_cell(&mut self, coord: Coord) -> Option<BoardCell> {
         if self.is_valid_position(coord) {
@@ -189,13 +175,6 @@ impl Game {
         self.is_valid_position(coord0) && self.is_valid_position(coord1) && 
         (coord1.row - coord0.row).abs() <= 1 && (coord1.col - coord0.col).abs() <= 1
     }
-    // pub fn in_range(&self, range: u8, coord0 : Coord, coord1 : Coord) -> bool {
-    //     coord0 == coord1 || // we consider our own position as in range
-    //     self.is_valid_position(coord0) && 
-    //     self.is_valid_position(coord1) && 
-    //     (coord1.row - coord0.row).abs() as u8 <= range && 
-    //     (coord1.col - coord0.col).abs() as u8 <= range
-    // }
     pub fn in_range(&self, range: u8, from : Coord, to : Coord) -> bool {
         // no diagonals and same position not allowed
         self.is_valid_position(from) && 
@@ -226,7 +205,7 @@ impl Game {
         }
     }
     pub fn end_game_result(&self) -> Option<Player>{
-        if self.info.max_moves.is_some() && self.total_moves() >= self.info.max_moves.unwrap() {
+        if self.options.max_moves.is_some() && self.total_moves() >= self.options.max_moves.unwrap() {
             // max moves reached: draw
             // println!("DEBUG: reached max moves!");
             return Some(self.best_score_player())
@@ -258,11 +237,13 @@ impl Game {
             None
         }
     }
-    pub fn parse_move_stdin(&self) -> Option<(Coord,Coord)> {
+    pub fn parse_move_stdin(&self) -> Result<(Coord,Coord),String> {
         use std::io::Write;
-        print!("{} player, enter your next move [ex: a6 d9] : ",self.player());
+        print!("{} player, enter your next move: ",self.player());
         std::io::stdout().flush().unwrap();
-        Self::parse_move(&std::io::stdin().lines().next().unwrap().unwrap())
+        let input = std::io::stdin().lines().next().unwrap().unwrap();
+        let parsed = Self::parse_move(&input);
+        parsed.ok_or(input)
     }
     pub fn parse_move(move_str: &str) -> Option<(Coord,Coord)> {
         use regex::Regex;
@@ -292,7 +273,7 @@ impl Game {
     }
     pub fn random_drop(&mut self) -> DropOutcome {
         let mut rng = rand::thread_rng();
-        if self.info.drop_prob.is_some() && rng.gen::<f32>() < self.info.drop_prob.unwrap() {
+        if self.options.drop_prob.is_some() && rng.gen::<f32>() < self.options.drop_prob.unwrap() {
             let unit_type = *[UnitType::Virus,UnitType::Tech].choose(&mut rng).expect("expect a hacker or repair");
             if let Some(empty_coord) = self.empty_coords().choose(&mut rng) {
                 self.set_cell(empty_coord, BoardCell::new_unit(self.player(), unit_type));
@@ -347,12 +328,14 @@ impl Game {
     }
     pub fn console_play_turn(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
         if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_coords(from, to) {
-            println!("# {} {}", player, action);
-            if outcome.is_useful_info() {
-                println!("# {}", outcome);
-            }
-            if drop_outcome.is_useful_info() {
-                println!("# {}", drop_outcome);
+            println!("-> {}: {}", player, action);
+            if self.options.debug {
+                if outcome.is_useful_info() {
+                    println!("# {}", outcome);
+                }
+                if drop_outcome.is_useful_info() {
+                    println!("# {}", drop_outcome);
+                }
             }
             true
         } else {
@@ -364,26 +347,19 @@ impl Game {
             self[from].is_unit() && 
             self[to].is_unit() 
         {
+            let mutual_damage = self.options.mutual_damage;
             let [source, target] = self.get_two_cell_data_mut(from, to).unwrap();
             let (player_source,unit_source) = source.unit_mut().unwrap();
             let (player_target,unit_target) = target.unit_mut().unwrap();
             if player_source != player_target {
-                //
-                // this section is for mutual damage....
-                //
-                // it's an opposing unit so we try to damage it (it will damage us back)
+                // it's an opposing unit so we try to damage it
+                let mut damage_to_source = 0;
+                if mutual_damage {
+                    damage_to_source = unit_target.apply_damage(unit_source);
+                }
                 let damage_to_target = unit_source.apply_damage(unit_target);
-                let damage_to_source = unit_target.apply_damage(unit_source);
                 self.remove_dead(from);
                 self.remove_dead(to);
-                //
-                // this section is for no return damage....
-                //
-                // it's an opposing unit so we try to damage it (no return damage)
-                // let damage_to_target = unit_source.apply_damage(unit_target);
-                // let damage_to_source = 0;
-                // self.remove_dead(to);
-                //
                 Ok(ActionOutcome::Damaged { to_source: damage_to_source, to_target: damage_to_target })
             } else {
                 Err(anyhow!("can't attack friendly units"))
@@ -419,7 +395,7 @@ impl Game {
         {
             // it's our turn and we are acting on our own unit
             if from == to {
-                // // destination is same as source => we wish to skip this move
+                // destination is same as source => we wish to skip this move
                 // Ok(Action::Pass)
                 // destination is same as source => skip/pass disabled
                 Err(anyhow!("can't pass"))
@@ -453,22 +429,24 @@ impl Game {
         }
     }
     pub fn pretty_print(&self) {
-        if let Some(max_moves) = self.info.max_moves {
-            if self.total_moves() >= max_moves {
-                println!("maximum moves played ({})",max_moves);
+        if self.options.debug {
+            if let Some(max_moves) = self.options.max_moves {
+                if self.total_moves() >= max_moves {
+                    println!("# maximum moves played ({})",max_moves);
+                } else {
+                    println!("# {}/{} moves played",self.total_moves(),max_moves);
+                }
             } else {
-                println!("{}/{} moves played",self.total_moves(),max_moves);
+                println!("# {} moves played",self.total_moves());
             }
-        } else {
-            println!("{} moves played",self.total_moves());
+            if let Some(max_depth) = self.options.max_depth {
+                println!("# Max search depth: {}",max_depth);
+            }
+            if let Some(max_seconds) = self.options.max_seconds {
+                println!("# Max search time: {:.1} sec",max_seconds);
+            }
+            println!("# Next player: {}",self.player());
         }
-        if let Some(max_depth) = self.info.max_depth {
-            println!("Max search depth: {}",max_depth);
-        }
-        if let Some(max_seconds) = self.info.max_seconds {
-            println!("Max search time: {:.1} sec",max_seconds);
-        }
-        println!("Next player: {}",self.player());
         print!("    ");
         for col in 0..self.dim() {
             print!(" {:>2} ",col);
@@ -519,9 +497,9 @@ impl Game {
             // not finished so call appropriate heuristic
             None => {
                 let heuristic = if player.is_attacker() {
-                    self.info.heuristics.attacker
+                    self.options.heuristics.attacker
                 } else {
-                    self.info.heuristics.defender
+                    self.options.heuristics.defender
                 };
                 heuristic(self,player)
             }
@@ -533,13 +511,13 @@ impl Game {
     }
     pub fn suggest_action_rec(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
         let mut timeout = false;
-        if let Some(max_seconds) = self.info.max_seconds {
+        if let Some(max_seconds) = self.options.max_seconds {
             let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
             if elapsed_seconds > max_seconds {
                 timeout = true;
             }
         }
-        if timeout || self.info.max_depth.is_some() && depth >= self.info.max_depth.unwrap() || self.end_game_result().is_some() {
+        if timeout || self.options.max_depth.is_some() && depth >= self.options.max_depth.unwrap() || self.end_game_result().is_some() {
             (self.heuristic(player),None,depth as f32)
         } else {
             let mut best_action = None;
@@ -638,31 +616,69 @@ impl Game {
         (score,suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
     pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
-        if self.info.max_depth.is_some() && avg_depth < self.info.max_depth.unwrap() as f32 * 0.9 {
-            self.set_max_depth(Some(self.info.max_depth.unwrap()-1));
-        } else if self.info.max_depth.is_some() && self.info.max_seconds.is_some() && elapsed_seconds < self.info.max_seconds.unwrap() * 0.25 {
-            self.set_max_depth(Some(self.info.max_depth.unwrap()+1));
+        let mut options = self.options();
+        if options.max_depth.is_some() && avg_depth < options.max_depth.unwrap() as f32 * 0.9 {
+            options.max_depth = Some(options.max_depth.unwrap()-1);
+        } else if options.max_depth.is_some() && options.max_seconds.is_some() && elapsed_seconds < self.options.max_seconds.unwrap() * 0.25 {
+            options.max_depth = Some(options.max_depth.unwrap()+1);
         }
+        self.set_options(options);
     }
     pub fn computer_play_turn(&mut self) {
+        let mut options = self.options();
+        options.drop_prob = None;
         let mut computer_game = self.clone();
-        computer_game.set_drop_prob(None);
+        computer_game.set_options(options);
         let (score,best_action,elapsed_seconds,avg_depth) = computer_game.suggest_action();
         self.adjust_max_depth(elapsed_seconds, avg_depth);
         if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
-            println!("# {} {}", player, action);
-            if outcome.is_useful_info() {
-                println!("# {}", outcome);
+            println!("-> {}: {}", player, action);
+            if self.options.debug {
+                if outcome.is_useful_info() {
+                    println!("# {}", outcome);
+                }
+                if drop_outcome.is_useful_info() {
+                    println!("# {}", drop_outcome);
+                }
+                println!("# Compute time: {:.1} sec", elapsed_seconds);
+                println!("# Average depth: {:.1}", avg_depth);
+                println!("# Score: {}", score);
             }
-            if drop_outcome.is_useful_info() {
-                println!("# {}", drop_outcome);
-            }
-            println!("# Compute time: {:.1} sec", elapsed_seconds);
-            println!("# Average depth: {:.1}", avg_depth);
-            println!("# Score: {}", score);
         } else {
             panic!("play turn should work");
         }
+    }
+    pub fn console_play_turn_stdin(&mut self) {
+        loop {
+            match self.parse_move_stdin() {
+                Ok((from,to)) => {
+                    if self.console_play_turn(from, to) {
+                        break;
+                    } else {
+                        println!("Invalid move!");
+                        println!();
+                    }
+                },
+                Err(s) if s == "quit" || s == "exit" => {
+                    std::process::exit(0);
+                },
+                _ => {
+                    println!();
+                    println!("example input: a6 d9"); 
+                    println!();
+                    println!("{}",UnitType::units_description());
+                }
+            }
+        }
+    }
+    pub fn console_quick_suggestion(&self) {
+        let mut options = self.options();
+        options.max_depth = Some(4);
+        options.max_seconds = Some(0.5);
+        let mut game_suggest = self.clone();
+        game_suggest.set_options(options);
+        let (_, suggestion,_,_) = game_suggest.suggest_action();
+        println!("Suggestion: {}",suggestion);
     }
 }
 

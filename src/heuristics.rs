@@ -131,3 +131,21 @@ fn unit_health_score(unit: &Unit) -> HeuristicScore {
 //     test(h, game, player)
 // }
 
+// pub struct HeuristicBox {
+//     pub function: Box<dyn Fn(&Game,Player) -> HeuristicScore>,
+// }
+
+// impl std::ops::Deref for HeuristicBox {
+//     type Target = dyn Fn(&Game,Player) -> HeuristicScore;
+
+//     fn deref(&self) -> &Self::Target {
+//         &self.function
+//     }
+// }
+
+// not working...
+// impl HeuristicBox {
+//     fn new(f: impl Fn(&Game,Player) -> HeuristicScore) -> Self {
+//         Self { function: Box::new(f.into()) }
+//     }
+// }
