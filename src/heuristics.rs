@@ -1,3 +1,5 @@
+use std::{ops::Deref, sync::Arc};
+
 use crate::{Game, BoardCell, Player, Unit, UnitType};
 
 pub type HeuristicScore = i32;
@@ -90,56 +92,47 @@ fn unit_health_score(unit: &Unit) -> HeuristicScore {
     score*(100+unit.health) as HeuristicScore
 }
 
-//
-// a test with traits...
-//
-// pub trait HeuristicFn : Fn(&Game,Player) -> HeuristicScore {
-//     fn clone_box<'a>(&self) -> Box<dyn HeuristicFn + 'a> where Self: 'a;
-// }
-// impl<F> HeuristicFn for F where F: Clone + Fn(&Game,Player) -> HeuristicScore,
-// {
-//     fn clone_box<'a>(&self) -> Box<dyn HeuristicFn + 'a> where Self: 'a,
-//     {
-//         Box::new(self.clone())
-//     }
-// }
-// impl<'a> Clone for Box<dyn HeuristicFn + 'a> {
-//     fn clone(&self) -> Self {
-//         (**self).clone_box()
-//     }
-// }
-// pub type HeuristicFnBox = Box<dyn HeuristicFn>;
 
-// pub fn test(h : HeuristicFnBox, game: &Game, player : Player) -> HeuristicScore {
-//     let f = h.clone();
-//     f(game,player)
-// }
+#[derive(Clone)]
+pub struct HeuristicType {
+    function : Arc<dyn HeuristicFn>,
+}
+impl HeuristicType {
+    pub fn new(f: impl HeuristicFn + 'static) -> Self {
+        Self { function: Arc::new(f) }
+    }
+}
+impl Deref for HeuristicType {
+    type Target = dyn HeuristicFn;
+    fn deref(&self) -> &Self::Target {
+        self.function.as_ref()
+    }
+}
 
-// pub fn test2(game: &Game, player : Player) -> HeuristicScore {
-//     let h = Box::new(zero_heuristic);
-//     test(h, game, player)
-// }
+pub trait HeuristicFn : Fn(&Game,Player) -> HeuristicScore {
+    fn into_heuristic(self) -> HeuristicType where Self: Sized + 'static {
+        HeuristicType::new(self)
+    }
+}
+impl<T: Fn(&Game,Player) -> HeuristicScore> HeuristicFn for T {}
 
-// pub fn test3(game: &Game, player : Player) -> HeuristicScore {
-//     let h = Box::new(|game:&Game,player|game.player_score(player));
-//     test(h, game, player)
-// }
+pub fn weighted_sum_two(wf: HeuristicScore, f: HeuristicType, wh: HeuristicScore, h: HeuristicType) -> HeuristicType {
+    HeuristicType::new(
+        move|g:&Game,p:Player| wf*f(g,p)+wh*h(g,p)
+    )
+}
 
-// pub struct HeuristicBox {
-//     pub function: Box<dyn Fn(&Game,Player) -> HeuristicScore>,
-// }
+pub fn test4(game: &Game, player : Player) -> HeuristicScore {
+    let fb1 = (|g: &Game,p| ai_distance_units_health_heuristic(g,p)).into_heuristic();
+    let fb2 = HeuristicType::new(ai_distance_units_health_heuristic);
+    let fb3 = weighted_sum_two(2,fb1.clone(),3,fb2.clone());
+    fb3(game,player)+fb1(game,player)+fb2(game,player)
+}
 
-// impl std::ops::Deref for HeuristicBox {
-//     type Target = dyn Fn(&Game,Player) -> HeuristicScore;
-
-//     fn deref(&self) -> &Self::Target {
-//         &self.function
-//     }
+//// not working!!!!
+// pub fn weighted_sum_vec(v: Vec<(HeuristicScore, HeuristicType)>) -> HeuristicType {
+//     HeuristicType::new(
+//         move|g:&Game,p:Player| v.into_iter().map(|(wf,f)|wf*f(g,p)).sum()
+//     )
 // }
 
-// not working...
-// impl HeuristicBox {
-//     fn new(f: impl Fn(&Game,Player) -> HeuristicScore) -> Self {
-//         Self { function: Box::new(f.into()) }
-//     }
-// }
