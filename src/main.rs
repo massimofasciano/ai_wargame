@@ -54,16 +54,28 @@ fn main() {
 
         } else {
 
-            let (score, suggestion,elapsed_seconds,avg_depth) = game.suggest_action();
-            println!("Suggestion: {}",suggestion);
-            println!("Compute time: {:.1} sec",elapsed_seconds);
-            println!("Average depth: {:.1}", avg_depth);
-            println!("# Score: {}", score);
-            if let Some((from,to)) = game.parse_move_stdin() {
-                game.console_play_turn(from, to);
-            } else {
-                println!("Invalid input!");
+            // let (score, suggestion,elapsed_seconds,avg_depth) = game.suggest_action();
+            // println!("Suggestion: {}",suggestion);
+            // println!("Compute time: {:.1} sec",elapsed_seconds);
+            // println!("Average depth: {:.1}", avg_depth);
+            // println!("# Score: {}", score);
+            loop {
+                if let Some((from,to)) = game.parse_move_stdin() {
+                    if game.console_play_turn(from, to) {
+                        break;
+                    } else {
+                        println!("Invalid move!");
+                    }
+                } else {
+                    println!("Invalid input!");
+                }
             }
+
+            println!();
+            game.pretty_print();
+            println!();
+  
+            game.computer_play_turn();
 
         }
     }
