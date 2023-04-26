@@ -14,11 +14,11 @@ impl std::fmt::Display for Action {
         write!(f, "{}", match self {
             Self::Pass => String::from("passes"),
             Self::Move { from, to } => 
-                format!("moves from {} to {}",from,to),
+                format!("move from {} to {}",from,to),
             Self::Repair { from, to } => 
-                format!("repairs from {} to {}",from,to),
+                format!("repair from {} to {}",from,to),
             Self::Attack { from, to } => 
-                format!("attacks from {} to {}",from,to),
+                format!("attack from {} to {}",from,to),
         })
     }
 }
