@@ -6,12 +6,12 @@ fn main() {
     let cmd_opt = std::env::args().nth(1);
 
     let mut options = GameOptions::default();
-    options.dim = 4;
+    // options.dim = 5;
     options.max_depth = Some(6);
-    options.max_moves = Some(100);
+    options.max_moves = Some(150);
     options.max_seconds = Some(5.0);
     options.heuristics.attacker = heuristics::ai_distance_units_health_heuristic;
-    options.heuristics.defender = heuristics::units_health_heuristic;
+    options.heuristics.defender = heuristics::ai_distance_units_health_heuristic;
     // options.mutual_damage = true;
     // options.debug = true;
     if cmd_opt == Some(String::from("auto")) {

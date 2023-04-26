@@ -16,7 +16,7 @@ pub fn units_heuristic(game: &Game, player : Player) -> HeuristicScore {
 }
 
 pub fn ai_distance_units_health_heuristic(game: &Game, player : Player) -> HeuristicScore {
-    ai_distance_heuristic(game, player)/5 + units_health_heuristic(game, player)
+    ai_distance_heuristic(game, player) + 5*units_health_heuristic(game, player)
 }
 
 pub fn ai_distance_heuristic(game: &Game, player : Player) -> HeuristicScore {
@@ -52,17 +52,6 @@ pub fn units_health_opponent_heuristic(game: &Game, player : Player) -> Heuristi
     game.units().map(|cell|cell_unit_type_health(cell,&player,0,1)).sum()
 }
 
-pub fn units_distance_from_center_row(game: &Game, player : Player) -> HeuristicScore {
-    let player_coords = game.player_unit_coords(player);
-    player_coords.map(|coord|{
-        (game.dim()/2-coord.row-1) as HeuristicScore
-    }).sum()
-}
-
-pub fn units_score_distance_center(game: &Game, player : Player) -> HeuristicScore {
-    units_distance_from_center_row(game, player)+units_health_heuristic(game, player)
-}
-
 fn cell_unit_type_health(cell: &BoardCell, current_player: &Player, weight_friend: HeuristicScore, weight_opponent: HeuristicScore) -> HeuristicScore {
     if cell.is_empty() {
         0
@@ -91,9 +80,14 @@ fn cell_unit_type(cell: &BoardCell, current_player: &Player) -> HeuristicScore {
     }
 }
 
+// fn unit_health_score(unit: &Unit) -> HeuristicScore {
+//     // health*value with bias (so that keeping units alive is better)
+//     unit.unit_type.score()*(unit.health+3) as HeuristicScore
+// }
+
 fn unit_health_score(unit: &Unit) -> HeuristicScore {
-    // health*value with bias (so that keeping units alive is better)
-    unit.unit_type.score()*(unit.health+3) as HeuristicScore
+    let score = unit.unit_type.score();
+    score*(100+unit.health) as HeuristicScore
 }
 
 //

@@ -619,7 +619,7 @@ impl Game {
         let mut options = self.options();
         if options.max_depth.is_some() && avg_depth < options.max_depth.unwrap() as f32 * 0.9 {
             options.max_depth = Some(options.max_depth.unwrap()-1);
-        } else if options.max_depth.is_some() && options.max_seconds.is_some() && elapsed_seconds < self.options.max_seconds.unwrap() * 0.25 {
+        } else if options.max_depth.is_some() && options.max_seconds.is_some() && elapsed_seconds < self.options.max_seconds.unwrap() * 0.1 {
             options.max_depth = Some(options.max_depth.unwrap()+1);
         }
         self.set_options(options);
