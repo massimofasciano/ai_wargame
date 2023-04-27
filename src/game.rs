@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_HEURISTIC, Heuristic, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics};
 use anyhow::anyhow;
 use smart_default::SmartDefault;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
@@ -43,32 +43,9 @@ pub struct GameOptions {
     pub max_depth: Option<usize>,
     pub max_moves: Option<usize>,
     pub max_seconds: Option<f32>,
-    pub heuristics: GameHeuristics,
+    pub heuristics: Heuristics,
     pub mutual_damage: bool,
     pub debug : bool,
-}
-
-#[derive(Clone)]
-pub struct GameHeuristics {
-    pub attacker: Heuristic,
-    pub defender: Heuristic,
-}
-
-impl GameHeuristics {
-    fn new(attacker: Heuristic, defender: Heuristic) -> Self {
-        Self { attacker, defender }
-    }
-}
-impl Default for GameHeuristics {
-    fn default() -> Self {
-        Self::new(DEFAULT_HEURISTIC,DEFAULT_HEURISTIC)
-    }
-}
-
-impl std::fmt::Debug for GameHeuristics {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"{:#?}",vec!["attacker_heuristic","defender_heuristic"])
-    }
 }
 
 impl Default for Game {
@@ -497,9 +474,9 @@ impl Game {
             // not finished so call appropriate heuristic
             None => {
                 let heuristic = if player.is_attacker() {
-                    self.options.heuristics.attacker
+                    self.options.heuristics.attacker.clone()
                 } else {
-                    self.options.heuristics.defender
+                    self.options.heuristics.defender.clone()
                 };
                 heuristic(self,player)
             }

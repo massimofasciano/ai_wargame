@@ -1,4 +1,4 @@
-use ai_wargame::{Game, heuristics, GameOptions};
+use ai_wargame::{Game, heuristics::{self}, GameOptions};
 
 fn main() {
     #[cfg(feature="rayon")]
@@ -10,8 +10,8 @@ fn main() {
     options.max_depth = Some(6);
     options.max_moves = Some(150);
     options.max_seconds = Some(5.0);
-    options.heuristics.attacker = heuristics::ai_distance_units_health_heuristic;
-    options.heuristics.defender = heuristics::ai_distance_units_health_heuristic;
+    options.heuristics.attacker = heuristics::ai_distance_units_health();
+    options.heuristics.defender = heuristics::ai_distance_units_health();
     // options.mutual_damage = true;
     // options.debug = true;
     if cmd_opt == Some(String::from("auto")) {
