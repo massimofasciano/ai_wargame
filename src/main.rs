@@ -14,6 +14,7 @@ fn main() {
     options.heuristics.defender = heuristics::ai_distance_units_health();
     // options.mutual_damage = true;
     // options.debug = true;
+    options.adjust_max_depth = true;
     if cmd_opt == Some(String::from("auto")) {
         options.debug = true;
     }

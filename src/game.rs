@@ -2,7 +2,7 @@ use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, 
 use anyhow::anyhow;
 use smart_default::SmartDefault;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
-use std::{time::SystemTime, sync::Arc};
+use std::{time::SystemTime, sync::{Arc, Mutex}};
 #[cfg(feature="rayon")]
 use rayon::prelude::*;
 
@@ -10,6 +10,7 @@ use rayon::prelude::*;
 pub struct Game {
     state: GameState,
     options: Arc<GameOptions>,
+    stats: Arc<Mutex<GameStats>>,
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +35,13 @@ impl Default for GameState {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct GameStats {
+    avg_depth_smoothed : Option<f32>,
+    elapsed_seconds_smoothed: Option<f32>,
+}
+
+
 #[derive(Debug, Clone, SmartDefault)]
 pub struct GameOptions {
     #[default(DEFAULT_BOARD_DIM)]
@@ -46,6 +54,7 @@ pub struct GameOptions {
     pub heuristics: Heuristics,
     pub mutual_damage: bool,
     pub debug : bool,
+    pub adjust_max_depth : bool,
 }
 
 impl Default for Game {
@@ -61,6 +70,7 @@ impl Game {
         let mut game = Self {
             state: GameState::new(dim),
             options: Arc::new(options),
+            stats: Default::default(),
         };
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
         use UnitType::*;
@@ -422,6 +432,15 @@ impl Game {
             if let Some(max_seconds) = self.options.max_seconds {
                 println!("# Max search time: {:.1} sec",max_seconds);
             }
+            {
+                let stats = self.stats.lock().expect("should get a lock");
+                if let Some(avg_depth_smoothed) = stats.avg_depth_smoothed {
+                    println!("# Smoothed average search depth: {:.1}",avg_depth_smoothed);
+                }
+                if let Some(elapsed_seconds_smoothed) = stats.elapsed_seconds_smoothed {
+                    println!("# Smoothed average search time: {:.1}",elapsed_seconds_smoothed);
+                }
+            }            
             println!("# Next player: {}",self.player());
         }
         print!("    ");
@@ -593,6 +612,21 @@ impl Game {
         (score,suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
     pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
+        let (avg_depth, elapsed_seconds) = {
+            let mut stats = self.stats.lock().expect("should get the lock");
+            if stats.avg_depth_smoothed.is_none() {
+                stats.avg_depth_smoothed = Some(avg_depth);
+            } else {
+                stats.avg_depth_smoothed = Some((stats.avg_depth_smoothed.unwrap() * 5.0 + avg_depth) / 6.0);
+
+            }
+            if stats.elapsed_seconds_smoothed.is_none() {
+                stats.elapsed_seconds_smoothed = Some(elapsed_seconds);
+            } else {
+                stats.elapsed_seconds_smoothed = Some((stats.elapsed_seconds_smoothed.unwrap() * 5.0 + elapsed_seconds) / 6.0);
+            }
+            (stats.avg_depth_smoothed.expect("not None"),stats.elapsed_seconds_smoothed.expect("not None"))
+        };
         let mut options = self.options();
         if options.max_depth.is_some() && avg_depth < options.max_depth.unwrap() as f32 * 0.9 {
             options.max_depth = Some(options.max_depth.unwrap()-1);
@@ -607,7 +641,9 @@ impl Game {
         let mut computer_game = self.clone();
         computer_game.set_options(options);
         let (score,best_action,elapsed_seconds,avg_depth) = computer_game.suggest_action();
-        self.adjust_max_depth(elapsed_seconds, avg_depth);
+        if self.options.adjust_max_depth {
+            self.adjust_max_depth(elapsed_seconds, avg_depth);
+        }
         if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
             println!("-> {}: {}", player, action);
             if self.options.debug {
