@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::Arc};
+use std::{ops::{Deref, Add, Mul}, sync::Arc};
 
 use crate::{Game, BoardCell, Player, Unit, UnitType};
 
@@ -116,23 +116,55 @@ pub trait HeuristicFn : Fn(&Game,Player) -> HeuristicScore {
 }
 impl<T: Fn(&Game,Player) -> HeuristicScore> HeuristicFn for T {}
 
-pub fn weighted_sum_two(wf: HeuristicScore, f: HeuristicType, wh: HeuristicScore, h: HeuristicType) -> HeuristicType {
-    HeuristicType::new(
-        move|g:&Game,p:Player| wf*f(g,p)+wh*h(g,p)
-    )
+impl Add for HeuristicType {
+    type Output = HeuristicType;
+    fn add(self, rhs: Self) -> Self::Output {
+        HeuristicType::new(
+            move|g:&Game,p:Player| self(g,p)+rhs(g,p)
+        )
+    }
 }
 
-pub fn test4(game: &Game, player : Player) -> HeuristicScore {
+impl Mul<HeuristicScore> for HeuristicType {
+    type Output = HeuristicType;
+    fn mul(self, rhs: HeuristicScore) -> Self::Output {
+        HeuristicType::new(
+            move|g:&Game,p:Player| rhs*self(g,p)
+        )
+    }
+}
+
+impl<T : HeuristicFn + 'static> Add<T> for HeuristicType {
+    type Output = HeuristicType;
+    fn add(self, rhs: T) -> Self::Output {
+        HeuristicType::new(
+            move|g:&Game,p:Player| self(g,p)+rhs(g,p)
+        )
+    }
+}
+
+impl Mul for HeuristicType {
+    type Output = HeuristicType;
+    fn mul(self, rhs: Self) -> Self::Output {
+        HeuristicType::new(
+            move|g:&Game,p:Player| self(g,p)*rhs(g,p)
+        )
+    }
+}
+
+impl<T : HeuristicFn + 'static> Mul<T> for HeuristicType {
+    type Output = HeuristicType;
+    fn mul(self, rhs: T) -> Self::Output {
+        HeuristicType::new(
+            move|g:&Game,p:Player| self(g,p)*rhs(g,p)
+        )
+    }
+}
+
+pub fn test_heuristic_type(game: &Game, player : Player) -> HeuristicScore {
     let fb1 = (|g: &Game,p| ai_distance_units_health_heuristic(g,p)).into_heuristic();
     let fb2 = HeuristicType::new(ai_distance_units_health_heuristic);
-    let fb3 = weighted_sum_two(2,fb1.clone(),3,fb2.clone());
-    fb3(game,player)+fb1(game,player)+fb2(game,player)
+    let fb4 = fb1 * 3 + fb2.clone() * 8 + fb2 * units_health_heuristic;
+    fb4(game,player)
 }
-
-//// not working!!!!
-// pub fn weighted_sum_vec(v: Vec<(HeuristicScore, HeuristicType)>) -> HeuristicType {
-//     HeuristicType::new(
-//         move|g:&Game,p:Player| v.into_iter().map(|(wf,f)|wf*f(g,p)).sum()
-//     )
-// }
 
