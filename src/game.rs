@@ -2,7 +2,9 @@ use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, 
 use anyhow::anyhow;
 use smart_default::SmartDefault;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
-use std::{time::SystemTime, sync::{Arc, Mutex}, collections::HashMap};
+use std::{time::SystemTime, sync::Arc};
+#[cfg(feature="stats")]
+use std::{sync::Mutex, collections::HashMap};
 #[cfg(feature="rayon")]
 use rayon::prelude::*;
 
@@ -10,6 +12,7 @@ use rayon::prelude::*;
 pub struct Game {
     state: GameState,
     options: Arc<GameOptions>,
+    #[cfg(feature="stats")]
     stats: Arc<Mutex<GameStats>>,
 }
 
@@ -35,6 +38,7 @@ impl Default for GameState {
     }
 }
 
+#[cfg(feature="stats")]
 #[derive(Debug, Clone, Default)]
 pub struct GameStats {
     depth_counts : HashMap<usize,usize>,
@@ -71,6 +75,7 @@ impl Game {
         let mut game = Self {
             state: GameState::new(dim),
             options: Arc::new(options),
+            #[cfg(feature="stats")]
             stats: Default::default(),
         };
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
@@ -433,6 +438,7 @@ impl Game {
             if let Some(max_seconds) = self.options.max_seconds {
                 println!("# Max search time: {:.1} sec",max_seconds);
             }
+            #[cfg(feature="stats")]
             {
                 let stats = self.stats.lock().expect("should get a lock");
                 println!("# Total evals at each depth: {:?}",stats.depth_counts);
@@ -481,7 +487,7 @@ impl Game {
             self.state.board.iter_unit_coords().filter_map(move|to| 
                 if from==to {None} else {Some(CoordPair::new(from,to))}))
     }
-    pub fn heuristic(&self, player: Player, depth: usize) -> HeuristicScore {
+    pub fn heuristic(&self, player: Player, _depth: usize) -> HeuristicScore {
         let result = self.end_game_result();
         // println!("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv");
         // println!("DEBUG: for_player={:?} result={:?}",for_player,result);
@@ -506,7 +512,9 @@ impl Game {
                 heuristic(self,player)
             }
         };
+        #[cfg(feature="stats")]
         {   // update total count for this depth
+            let depth = _depth;
             let mut stats = self.stats.lock().expect("lock should work");
             if let Some(count) = stats.depth_counts.remove(&depth) {
                 stats.depth_counts.insert(depth, count+1);
@@ -573,8 +581,12 @@ impl Game {
                 (self.heuristic(player,depth),None,depth as f32)
                 // (best_score, best_action, depth as f32)
             } else {
-                self.stats.lock().expect("should get a lock").total_moves_per_effective_branch += total_count;
-                self.stats.lock().expect("should get a lock").total_effective_branches += 1;
+                #[cfg(feature="stats")]
+                {   // branching stats
+                    let mut stats = self.stats.lock().expect("should get a lock");
+                    stats.total_moves_per_effective_branch += total_count;
+                    stats.total_effective_branches += 1;
+                }
                 (best_score, best_action, total_depth / total_count as f32)
             }
         }
@@ -644,7 +656,10 @@ impl Game {
         let mut computer_game = self.clone();
         computer_game.set_options(options);
         let (score,best_action,elapsed_seconds,avg_depth) = computer_game.suggest_action();
-        self.stats.lock().expect("should get the lock").total_seconds += elapsed_seconds;
+        #[cfg(feature="stats")]
+        {
+            self.stats.lock().expect("should get the lock").total_seconds += elapsed_seconds;
+        }
         if self.options.adjust_max_depth {
             self.adjust_max_depth(elapsed_seconds, avg_depth);
         }

@@ -9,7 +9,7 @@ cfg-if = "1.0.0"
 derive_more = "0.99.17"
 duplicate = "1.0.0"
 enum-iterator = "1.4.0"
-rand = "0.8.5"
+rand = "0.8.6"
 rayon = { version = "1.7.0", optional = true }
 regex = "1.7.3"
 smart-default = "0.7.1"
@@ -24,7 +24,7 @@ debug = 0
 codegen-units = 1
 
 [features]
-default = ["rand-actions", "board_map"]
+default = ["rand-actions", "board_map", "stats"]
 #default = ["board_map", "rayon"]
 #default = ["rand-actions", "board_map", "rayon"]
 #default = ["rand-actions", "board_array"]
@@ -33,3 +33,4 @@ rand-actions = []
 board_vec = []
 board_array = []
 board_map = []
+stats = []
