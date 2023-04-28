@@ -2,7 +2,7 @@ use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, 
 use anyhow::anyhow;
 use smart_default::SmartDefault;
 use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
-use std::{time::SystemTime, sync::{Arc, Mutex}};
+use std::{time::SystemTime, sync::{Arc, Mutex}, collections::HashMap};
 #[cfg(feature="rayon")]
 use rayon::prelude::*;
 
@@ -37,10 +37,11 @@ impl Default for GameState {
 
 #[derive(Debug, Clone, Default)]
 pub struct GameStats {
-    avg_depth_smoothed : Option<f32>,
-    elapsed_seconds_smoothed: Option<f32>,
+    depth_counts : HashMap<usize,usize>,
+    total_seconds : f32,
+    total_effective_branches : usize,
+    total_moves_per_effective_branch : usize,
 }
-
 
 #[derive(Debug, Clone, SmartDefault)]
 pub struct GameOptions {
@@ -434,11 +435,16 @@ impl Game {
             }
             {
                 let stats = self.stats.lock().expect("should get a lock");
-                if let Some(avg_depth_smoothed) = stats.avg_depth_smoothed {
-                    println!("# Smoothed average search depth: {:.1}",avg_depth_smoothed);
+                println!("# Total evals at each depth: {:?}",stats.depth_counts);
+                let (dc, ct) = stats.depth_counts.iter().fold((0,0),|(dc,ct),(d,c)| (dc+d*c,ct+c));
+                if ct > 0 {
+                    println!("# Average eval depth: {:.1}",dc as f32/ct as f32);
                 }
-                if let Some(elapsed_seconds_smoothed) = stats.elapsed_seconds_smoothed {
-                    println!("# Smoothed average search time: {:.1}",elapsed_seconds_smoothed);
+                if self.total_moves() > 0 {
+                    println!("# Average eval time: {:.1}",stats.total_seconds as f32/self.total_moves() as f32); 
+                }
+                if stats.total_effective_branches > 0 {
+                    println!("# Average branching factor: {:.1}",stats.total_moves_per_effective_branch as f32/stats.total_effective_branches as f32); 
                 }
             }            
             println!("# Next player: {}",self.player());
@@ -475,7 +481,7 @@ impl Game {
             self.state.board.iter_unit_coords().filter_map(move|to| 
                 if from==to {None} else {Some(CoordPair::new(from,to))}))
     }
-    pub fn heuristic(&self, player: Player) -> HeuristicScore {
+    pub fn heuristic(&self, player: Player, depth: usize) -> HeuristicScore {
         let result = self.end_game_result();
         // println!("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv");
         // println!("DEBUG: for_player={:?} result={:?}",for_player,result);
@@ -500,6 +506,14 @@ impl Game {
                 heuristic(self,player)
             }
         };
+        {   // update total count for this depth
+            let mut stats = self.stats.lock().expect("lock should work");
+            if let Some(count) = stats.depth_counts.remove(&depth) {
+                stats.depth_counts.insert(depth, count+1);
+            } else {
+                stats.depth_counts.insert(depth, 1);
+            }
+        }
         // println!("score: {}",score);
         // self.pretty_print();
         // println!("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
@@ -514,7 +528,7 @@ impl Game {
             }
         }
         if timeout || self.options.max_depth.is_some() && depth >= self.options.max_depth.unwrap() || self.end_game_result().is_some() {
-            (self.heuristic(player),None,depth as f32)
+            (self.heuristic(player,depth),None,depth as f32)
         } else {
             let mut best_action = None;
             let mut best_score;
@@ -556,8 +570,11 @@ impl Game {
                 }
             }
             if total_count == 0 {
-                (best_score, best_action, depth as f32)
+                (self.heuristic(player,depth),None,depth as f32)
+                // (best_score, best_action, depth as f32)
             } else {
+                self.stats.lock().expect("should get a lock").total_moves_per_effective_branch += total_count;
+                self.stats.lock().expect("should get a lock").total_effective_branches += 1;
                 (best_score, best_action, total_depth / total_count as f32)
             }
         }
@@ -612,25 +629,11 @@ impl Game {
         (score,suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
     pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
-        let (avg_depth, elapsed_seconds) = {
-            let mut stats = self.stats.lock().expect("should get the lock");
-            if stats.avg_depth_smoothed.is_none() {
-                stats.avg_depth_smoothed = Some(avg_depth);
-            } else {
-                stats.avg_depth_smoothed = Some((stats.avg_depth_smoothed.unwrap() * 5.0 + avg_depth) / 6.0);
-
-            }
-            if stats.elapsed_seconds_smoothed.is_none() {
-                stats.elapsed_seconds_smoothed = Some(elapsed_seconds);
-            } else {
-                stats.elapsed_seconds_smoothed = Some((stats.elapsed_seconds_smoothed.unwrap() * 5.0 + elapsed_seconds) / 6.0);
-            }
-            (stats.avg_depth_smoothed.expect("not None"),stats.elapsed_seconds_smoothed.expect("not None"))
-        };
+        let branching_factor = 5; // we could update this live
         let mut options = self.options();
         if options.max_depth.is_some() && avg_depth < options.max_depth.unwrap() as f32 * 0.9 {
             options.max_depth = Some(options.max_depth.unwrap()-1);
-        } else if options.max_depth.is_some() && options.max_seconds.is_some() && elapsed_seconds < self.options.max_seconds.unwrap() * 0.1 {
+        } else if options.max_depth.is_some() && options.max_seconds.is_some() && elapsed_seconds < self.options.max_seconds.unwrap() / (branching_factor as f32 * 1.2) {
             options.max_depth = Some(options.max_depth.unwrap()+1);
         }
         self.set_options(options);
@@ -641,6 +644,7 @@ impl Game {
         let mut computer_game = self.clone();
         computer_game.set_options(options);
         let (score,best_action,elapsed_seconds,avg_depth) = computer_game.suggest_action();
+        self.stats.lock().expect("should get the lock").total_seconds += elapsed_seconds;
         if self.options.adjust_max_depth {
             self.adjust_max_depth(elapsed_seconds, avg_depth);
         }
