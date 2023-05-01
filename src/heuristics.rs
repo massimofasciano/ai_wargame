@@ -1,4 +1,4 @@
-use std::{ops::{Deref, Add, Mul}, sync::Arc};
+use std::{ops::{Deref, Add, Mul, Sub, Neg}, sync::Arc};
 
 use crate::{Game, BoardCell, Player, UnitType};
 
@@ -35,6 +35,24 @@ impl Add for Heuristic {
     fn add(self, rhs: Self) -> Self::Output {
         Heuristic::new(
             move|g:&Game,p:Player| self(g,p)+rhs(g,p)
+        )
+    }
+}
+
+impl Sub for Heuristic {
+    type Output = Heuristic;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Heuristic::new(
+            move|g:&Game,p:Player| self(g,p)-rhs(g,p)
+        )
+    }
+}
+
+impl Neg for Heuristic {
+    type Output = Heuristic;
+    fn neg(self) -> Self::Output {
+        Heuristic::new(
+            move|g:&Game,p:Player| -self(g,p)
         )
     }
 }
@@ -77,7 +95,7 @@ impl<T : HeuristicFn + 'static> Mul<T> for Heuristic {
 
 impl Default for Heuristic {
     fn default() -> Self {
-        units_health_weights_bias(1,1,100) + game_moves()
+        units_health_weights_bias(1,1,100) - game_moves()
     }
 }
 

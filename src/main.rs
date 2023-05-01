@@ -14,8 +14,8 @@ fn main() {
         use heuristics::*;
         let h1 = units_health_weights_bias(9,10,100) * 10
                                 + ai_distance(2,1)
-                                + game_moves();
-        let h2 = game_moves();
+                                - game_moves();
+        let h2 = -game_moves();
         // options.heuristics.attacker_max = h1.clone();
         // options.heuristics.defender_min = h1;
         options.heuristics.set_attack_heuristics(h1);
