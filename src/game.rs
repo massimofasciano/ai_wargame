@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH};
 use anyhow::anyhow;
 use smart_default::SmartDefault;
 use rand::{seq::{SliceRandom}};
@@ -63,6 +63,8 @@ pub struct GameOptions {
     pub dim: Dim,
     #[default(Some(DEFAULT_MAX_DEPTH))]
     pub max_depth: Option<usize>,
+    #[default(Some(DEFAULT_MIN_DEPTH))]
+    pub min_depth: Option<usize>,
     pub max_moves: Option<usize>,
     pub max_seconds: Option<f32>,
     pub heuristics: Heuristics,
@@ -561,7 +563,9 @@ impl Game {
                 timeout = true;
             }
         }
-        if timeout || self.options.max_depth.is_some() && depth >= self.options.max_depth.unwrap() || self.end_game_result().is_some() {
+        if timeout && self.options.min_depth.is_some() && depth >= self.options.min_depth.unwrap()
+            || self.options.max_depth.is_some() && depth >= self.options.max_depth.unwrap()
+            || self.end_game_result().is_some() {
             (self.heuristic(player,maximizing_player,depth),None,depth as f32)
         } else {
             let mut best_action = None;
@@ -733,18 +737,18 @@ impl Game {
     pub fn suggest_action(&mut self) -> (HeuristicScore, Action, f32, f32) {
         let start_time = SystemTime::now();
         #[cfg(not(feature="rayon"))]
-        let (score,suggestion, avg_depth) = 
+        let (score, suggestion, avg_depth) = 
             self.suggest_action_rec(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
-        // let (score,suggestion, avg_depth) = 
+        // let (score, suggestion, avg_depth) = 
         //     self.suggest_action_rec_prob(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         #[cfg(feature="rayon")]
-        let (score,suggestion, avg_depth) = 
+        let (score, suggestion, avg_depth) = 
             self.suggest_action_rec_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
         (score,suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
     }
     pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
-        let branching_factor = 5; // we could update this live
+        let branching_factor = 12; // we could update this live
         let mut options = self.options();
         if options.max_depth.is_some() && avg_depth < options.max_depth.unwrap() as f32 * 0.9 {
             options.max_depth = Some(options.max_depth.unwrap()-1);

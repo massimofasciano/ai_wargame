@@ -75,7 +75,19 @@ impl<T : HeuristicFn + 'static> Mul<T> for Heuristic {
     }
 }
 
-#[derive(Clone)]
+impl Default for Heuristic {
+    fn default() -> Self {
+        units_health_weights_bias(1,1,100) + game_moves()
+    }
+}
+
+impl std::fmt::Debug for Heuristic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f,"Heuristic(function=...)")
+    }
+}
+
+#[derive(Clone,Default,Debug)]
 pub struct Heuristics {
     pub attacker_max: Heuristic,
     pub attacker_min: Heuristic,
@@ -83,33 +95,19 @@ pub struct Heuristics {
     pub defender_min: Heuristic,
 }
 
-impl Default for Heuristics {
-    fn default() -> Self {
-        Self { 
-            attacker_max: units_health(),
-            attacker_min: units_health(), 
-            defender_max: units_health(), 
-            defender_min: units_health() 
-        }
+impl Heuristics {
+    pub fn set_attack_heuristics(&mut self, h: Heuristic) {
+        self.attacker_max = h.clone();
+        self.defender_min = h;
+    }
+    pub fn set_defense_heuristics(&mut self, h: Heuristic) {
+        self.defender_max = h.clone();
+        self.attacker_min = h;
     }
 }
 
-impl std::fmt::Debug for Heuristics {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"{:#?}",vec!["attacker_heuristic","defender_heuristic"])
-    }
-}
-
-pub fn units_health() -> Heuristic {
-    units_health_weights_bias(1,2,100)
-}
-
-pub fn ai_distance_units_health() -> Heuristic {
-    units_health() * 5 + ai_distance() 
-}
-
-pub fn ai_distance() -> Heuristic {
-    Heuristic::new(|game: &Game, player : Player| {
+pub fn ai_distance(weight_friend: HeuristicScore, weight_opponent: HeuristicScore) -> Heuristic {
+    Heuristic::new(move|game: &Game, player : Player| {
         game.unit_coord_pairs().map(|pair| {
             let from_cell = game.get_cell(pair.from).expect("valid coord");
             let from_player = from_cell.player().expect("not empty");
@@ -120,10 +118,10 @@ pub fn ai_distance() -> Heuristic {
             let dist = pair.moves_distance() as HeuristicScore;
             if from_player == player && to_player != player && 
                 from_unit_type != UnitType::AI && from_unit_type != UnitType::Tech && to_unit_type == UnitType::AI {
-                -dist * from_unit_type.damage_amount(&to_unit_type) as HeuristicScore
+                -dist * from_unit_type.damage_amount(&to_unit_type) as HeuristicScore * weight_friend
             } else if from_player != player && to_player == player && 
                 from_unit_type != UnitType::AI && from_unit_type != UnitType::Tech && to_unit_type == UnitType::AI {
-                dist * from_unit_type.damage_amount(&to_unit_type) as HeuristicScore / 2
+                dist * from_unit_type.damage_amount(&to_unit_type) as HeuristicScore * weight_opponent
             } else {
                 0
             }
@@ -131,11 +129,12 @@ pub fn ai_distance() -> Heuristic {
     })
 }
 
-pub fn const_heuristic(value: HeuristicScore) -> Heuristic {
+pub fn constant_value(value: HeuristicScore) -> Heuristic {
     Heuristic::new(move|_,_| value)
 }
-pub fn zero_heuristic() -> Heuristic {
-    const_heuristic(0)
+
+pub fn game_moves() -> Heuristic {
+    Heuristic::new(|game: &Game,_| game.total_moves() as HeuristicScore)
 }
 
 pub fn units_health_weights_bias(weight_friend: HeuristicScore, weight_opponent: HeuristicScore, health_bias: HeuristicScore) -> Heuristic {

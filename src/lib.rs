@@ -23,6 +23,7 @@ pub use heuristics::{HeuristicScore,Heuristics};
 const MAX_HEALTH : Health = 9;
 pub const DEFAULT_BOARD_DIM : Dim = 5;
 pub const DEFAULT_MAX_DEPTH : usize = 6;
+pub const DEFAULT_MIN_DEPTH : usize = 4;
 
 trait DisplayFirstLetter : std::fmt::Display {
     fn to_first_letter(&self) -> char {
