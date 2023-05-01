@@ -17,7 +17,7 @@ pub use board::Board;
 pub use cell::{BoardCell,BoardCellData};
 pub use unit_type::UnitType;
 pub use player::Player;
-pub use actions::{Action, ActionOutcome, DropOutcome, IsUsefulInfo};
+pub use actions::{Action, ActionOutcome, IsUsefulInfo};
 pub use heuristics::{HeuristicScore,Heuristics};
 
 const MAX_HEALTH : Health = 9;

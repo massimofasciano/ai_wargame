@@ -1,4 +1,4 @@
-use crate::{Coord, Health, UnitType};
+use crate::{Coord, Health};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Action {
@@ -38,24 +38,10 @@ impl std::fmt::Display for ActionOutcome {
             Self::Passed => String::from("passed"),
             Self::Moved { delta } => format!("moved by {}",delta.to_string_as_tuple()),
             Self::Repaired { amount } => format!("repaired {} health points",amount),
+            Self::Damaged { to_source: 0, to_target } => 
+                format!("combat damage: {}",to_target),
             Self::Damaged { to_source, to_target } => 
                 format!("combat damage: to source = {}, to target = {}",to_source,to_target),
-        })
-    }
-}
-
-#[derive(Debug, Default, Clone, Copy)]
-pub enum DropOutcome {
-    #[default]
-    NoDrop,
-    Drop{location:Coord,unit_type:UnitType},
-}
-
-impl std::fmt::Display for DropOutcome {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Self::NoDrop => String::from("no drop"),
-            Self::Drop { location, unit_type } => format!("dropped {} at {}",unit_type,location),
         })
     }
 }
@@ -69,15 +55,6 @@ impl IsUsefulInfo for ActionOutcome {
         match self {
             Self::Damaged { to_source: _, to_target: _ } => true,
             Self::Repaired { amount: _ } => true,
-            _ => false,
-        }
-    }
-}
-
-impl IsUsefulInfo for DropOutcome {
-    fn is_useful_info(&self) -> bool {
-        match self {
-            Self::Drop { location: _, unit_type: _ } => true,
             _ => false,
         }
     }

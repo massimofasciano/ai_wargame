@@ -42,7 +42,7 @@ impl Unit {
         let damage = self.unit_type.damage_amount(&target.unit_type);
         damage != 0
     }
-    pub fn apply_damage(&mut self, target: &mut Self) -> u8 {
+    pub fn apply_damage(&mut self, target: &mut Self) -> Health {
         assert!(target.health <= MAX_HEALTH);
         let damage = self.unit_type.damage_amount(&target.unit_type);
         if damage < target.health {
@@ -51,6 +51,20 @@ impl Unit {
             target.health = 0;
         }
         damage
+    }
+    pub fn clone_apply_damage(&self, target: &Self, is_critical: bool) -> (Self, Health) {
+        assert!(target.health <= MAX_HEALTH);
+        let mut damage = self.unit_type.damage_amount(&target.unit_type);
+        if is_critical {
+            damage *= 2;
+        }
+        let mut target = target.clone();
+        if damage < target.health {
+            target.health -= damage;
+        } else {
+            target.health = 0;
+        }
+        (target, damage)
     }
     pub fn score(&self) -> HeuristicScore {
         self.unit_type.score()

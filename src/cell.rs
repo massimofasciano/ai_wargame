@@ -25,7 +25,7 @@ impl Default for BoardCellData {
 }
 
 impl BoardCellData {
-    pub fn unit_mut(&mut self) -> Option<(&mut Player,&mut Unit)> {
+    pub fn player_unit_mut(&mut self) -> Option<(&mut Player,&mut Unit)> {
         match self {
             BoardCellData::Unit { player, unit } => Some((player,unit)),
         }

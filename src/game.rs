@@ -1,7 +1,7 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, DropOutcome, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, IsUsefulInfo, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics};
 use anyhow::anyhow;
 use smart_default::SmartDefault;
-use rand::{Rng,seq::{IteratorRandom, SliceRandom}};
+use rand::{seq::{SliceRandom}};
 use std::{time::SystemTime, sync::Arc};
 #[cfg(feature="stats")]
 use std::{sync::Mutex, collections::HashMap};
@@ -38,6 +38,16 @@ impl Default for GameState {
     }
 }
 
+impl GameState {
+    pub fn into_shallow_copy(self) -> Self {
+        Self {
+            player: self.player,
+            total_moves: self.total_moves,
+            board: self.board,
+        }
+    }
+}
+
 #[cfg(feature="stats")]
 #[derive(Debug, Clone, Default)]
 pub struct GameStats {
@@ -51,7 +61,6 @@ pub struct GameStats {
 pub struct GameOptions {
     #[default(DEFAULT_BOARD_DIM)]
     pub dim: Dim,
-    pub drop_prob: Option<f32>,
     #[default(Some(DEFAULT_MAX_DEPTH))]
     pub max_depth: Option<usize>,
     pub max_moves: Option<usize>,
@@ -94,6 +103,14 @@ impl Game {
             game.set_cell((dim-1-row,dim-1-col),BoardCell::new_unit(p1, unit_type));
         }
         game
+    }
+    pub fn into_shallow_copy(self) -> Self {
+        Self {
+            state: self.state.into_shallow_copy(),
+            options: self.options.clone(),
+            #[cfg(feature="stats")]
+            stats: self.stats.clone(),
+        }
     }
     pub fn dim(&self) -> Dim {
         self.options.dim
@@ -147,10 +164,16 @@ impl Game {
     pub fn total_moves(&self) -> usize {
         self.state.total_moves
     }
-    pub fn next_player(&mut self) -> Player {
+    pub fn next_turn(&mut self) -> Player {
         self.state.player = self.state.player.next();
         self.state.total_moves += 1;
         self.state.player
+    }
+    pub fn into_next_turn(self) -> Self {
+        let mut next = self.into_shallow_copy();
+        next.state.player = next.state.player.next();
+        next.state.total_moves += 1;
+        next
     }
     pub fn is_valid_position(&self, coord : Coord) -> bool {
         let (row,col) = coord.to_tuple();
@@ -264,20 +287,6 @@ impl Game {
     pub fn player_coords<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
         self.state.board.player_coords(player)
     }
-    pub fn random_drop(&mut self) -> DropOutcome {
-        let mut rng = rand::thread_rng();
-        if self.options.drop_prob.is_some() && rng.gen::<f32>() < self.options.drop_prob.unwrap() {
-            let unit_type = *[UnitType::Virus,UnitType::Tech].choose(&mut rng).expect("expect a hacker or repair");
-            if let Some(empty_coord) = self.empty_coords().choose(&mut rng) {
-                self.set_cell(empty_coord, BoardCell::new_unit(self.player(), unit_type));
-                DropOutcome::Drop {location:empty_coord, unit_type: unit_type}
-            } else {
-                DropOutcome::NoDrop
-            }
-        } else {
-            DropOutcome::NoDrop
-        }
-    }
     pub fn remove_dead(&mut self, coord: Coord) {
         if let Some(cell) = self.get_cell(coord) {
             if let Some((_, unit)) = cell.player_unit() {
@@ -301,18 +310,37 @@ impl Game {
             }
         }
     }
-    pub fn play_turn_from_action(&mut self, action: Action) -> Result<(Player,Action,ActionOutcome,DropOutcome),anyhow::Error> {
+    pub fn perform_action_rec_prob(&self, action: Action) -> Result<Vec<(Game,f32)>,anyhow::Error> {
+        let mut new = self.clone();
+        let outcome = match action {
+            Action::Pass => Ok(ActionOutcome::Passed),
+            Action::Move { from, to } => {
+                new.unit_move(from, to)
+            }
+            Action::Repair { from, to } => {
+                new.unit_repair(from, to)
+            }
+            Action::Attack { from, to } => {
+                new.unit_combat(from, to)
+            }
+        };
+        if outcome.is_err() {
+            Err(outcome.unwrap_err())
+        } else {
+            Ok(vec![(new.into_next_turn(),1.0)])
+        }
+    }
+    pub fn play_turn_from_action(&mut self, action: Action) -> Result<(Player,Action,ActionOutcome),anyhow::Error> {
         let outcome = self.perform_action(action);
         if let Ok(outcome) = outcome {
-            let drop_outcome = self.random_drop();
             let player = self.player();
-            self.next_player();
-            Ok((player,action,outcome,drop_outcome))
+            self.next_turn();
+            Ok((player,action,outcome))
         } else {
             Err(anyhow!("invalid action"))
         }
     }
-    pub fn play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<(Player,Action,ActionOutcome,DropOutcome),anyhow::Error> {
+    pub fn play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<(Player,Action,ActionOutcome),anyhow::Error> {
         if let Ok(action) = self.action_from_coords(from, to) {
             self.play_turn_from_action(action)
         } else {
@@ -320,14 +348,11 @@ impl Game {
         }
     }
     pub fn console_play_turn(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
-        if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_coords(from, to) {
+        if let Ok((player, action, outcome)) = self.play_turn_from_coords(from, to) {
             println!("-> {}: {}", player, action);
             if self.options.debug {
                 if outcome.is_useful_info() {
                     println!("# {}", outcome);
-                }
-                if drop_outcome.is_useful_info() {
-                    println!("# {}", drop_outcome);
                 }
             }
             true
@@ -342,8 +367,8 @@ impl Game {
         {
             let mutual_damage = self.options.mutual_damage;
             let [source, target] = self.get_two_cell_data_mut(from, to).unwrap();
-            let (player_source,unit_source) = source.unit_mut().unwrap();
-            let (player_target,unit_target) = target.unit_mut().unwrap();
+            let (player_source,unit_source) = source.player_unit_mut().unwrap();
+            let (player_target,unit_target) = target.player_unit_mut().unwrap();
             if player_source != player_target {
                 // it's an opposing unit so we try to damage it
                 let mut damage_to_source = 0;
@@ -367,8 +392,8 @@ impl Game {
             self[to].is_unit() 
         {
             let [source, target] = self.get_two_cell_data_mut(from, to).unwrap();
-            let (player_source,unit_source) = source.unit_mut().unwrap();
-            let (player_target,unit_target) = target.unit_mut().unwrap();
+            let (player_source,unit_source) = source.player_unit_mut().unwrap();
+            let (player_target,unit_target) = target.player_unit_mut().unwrap();
             if player_source == player_target {
                 // it's a friendly unit so we can try to repair it
                 let repair_amount = unit_source.apply_repair(unit_target);
@@ -489,8 +514,6 @@ impl Game {
     }
     pub fn heuristic(&self, player: Player, _depth: usize) -> HeuristicScore {
         let result = self.end_game_result();
-        // println!("vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv");
-        // println!("DEBUG: for_player={:?} result={:?}",for_player,result);
         let moves = self.total_moves() as HeuristicScore;
         let score = match result {
             Some(winner) => {
@@ -522,9 +545,6 @@ impl Game {
                 stats.depth_counts.insert(depth, 1);
             }
         }
-        // println!("score: {}",score);
-        // self.pretty_print();
-        // println!("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
         score
     }
     pub fn suggest_action_rec(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
@@ -562,6 +582,81 @@ impl Game {
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
                 let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(!maximizing_player, player, depth+1, alpha, beta, start_time);
+                total_depth += rec_avg_depth;
+                total_count += 1;
+                // println!("DEBUG: depth={} best={:?} new={:?} new_action={:?}",depth, best_score,score,possible_action);
+                if maximizing_player && score > best_score || !maximizing_player && score < best_score {
+                    best_score = score;
+                    best_action = Some(possible_action);
+                }
+                if maximizing_player {
+                    if best_score > beta { break; }
+                    alpha = std::cmp::max(alpha, best_score);
+                } else {
+                    if best_score < alpha { break; }
+                    beta = std::cmp::min(beta, best_score);
+                }
+            }
+            if total_count == 0 {
+                (self.heuristic(player,depth),None,depth as f32)
+                // (best_score, best_action, depth as f32)
+            } else {
+                #[cfg(feature="stats")]
+                {   // branching stats
+                    let mut stats = self.stats.lock().expect("should get a lock");
+                    stats.total_moves_per_effective_branch += total_count;
+                    stats.total_effective_branches += 1;
+                }
+                (best_score, best_action, total_depth / total_count as f32)
+            }
+        }
+    }
+    pub fn suggest_action_rec_prob(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
+        let mut timeout = false;
+        if let Some(max_seconds) = self.options.max_seconds {
+            let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
+            if elapsed_seconds > max_seconds {
+                timeout = true;
+            }
+        }
+        if timeout || self.options.max_depth.is_some() && depth >= self.options.max_depth.unwrap() || self.end_game_result().is_some() {
+            (self.heuristic(player,depth),None,depth as f32)
+        } else {
+            let mut best_action = None;
+            let mut best_score;
+            let mut total_depth = 0.0;
+            let mut total_count = 0;
+            let possible_actions = self.player_unit_coords(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
+            cfg_if::cfg_if! {
+                if #[cfg(feature = "rand-actions")] {
+                    let mut possible_actions = possible_actions.collect::<Vec<_>>();
+                    let mut rng = rand::thread_rng();
+                    possible_actions.shuffle(&mut rng);
+                } else {
+                }
+            }
+            if maximizing_player {
+                best_score = heuristics::MIN_HEURISTIC_SCORE;
+            } else {
+                best_score = heuristics::MAX_HEURISTIC_SCORE;
+            }
+            let mut alpha = alpha;
+            let mut beta = beta;
+            for possible_action in possible_actions {
+                let mut rec_avg_depth_total = 0.0;
+                let mut score_total = 0.0;
+                let mut weight_total = 0.0;
+                let mut games_total = 0;
+                let possible_games = self.perform_action_rec_prob(possible_action).expect("action should be valid");
+                for (possible_game,weight) in possible_games {
+                    let (score, _, rec_avg_depth) = possible_game.suggest_action_rec_prob(!maximizing_player, player, depth+1, alpha, beta, start_time);
+                    rec_avg_depth_total += rec_avg_depth;
+                    score_total += score as f32*weight;
+                    weight_total += weight;
+                    games_total += 1;
+                }
+                let rec_avg_depth = rec_avg_depth_total / games_total as f32;
+                let score = (score_total / weight_total) as HeuristicScore;
                 total_depth += rec_avg_depth;
                 total_count += 1;
                 // println!("DEBUG: depth={} best={:?} new={:?} new_action={:?}",depth, best_score,score,possible_action);
@@ -634,6 +729,8 @@ impl Game {
         #[cfg(not(feature="rayon"))]
         let (score,suggestion, avg_depth) = 
             self.suggest_action_rec(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
+        // let (score,suggestion, avg_depth) = 
+        //     self.suggest_action_rec_prob(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         #[cfg(feature="rayon")]
         let (score,suggestion, avg_depth) = 
             self.suggest_action_rec_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
@@ -651,11 +748,7 @@ impl Game {
         self.set_options(options);
     }
     pub fn computer_play_turn(&mut self) {
-        let mut options = self.options();
-        options.drop_prob = None;
-        let mut computer_game = self.clone();
-        computer_game.set_options(options);
-        let (score,best_action,elapsed_seconds,avg_depth) = computer_game.suggest_action();
+        let (score,best_action,elapsed_seconds,avg_depth) = self.suggest_action();
         #[cfg(feature="stats")]
         {
             self.stats.lock().expect("should get the lock").total_seconds += elapsed_seconds;
@@ -663,14 +756,11 @@ impl Game {
         if self.options.adjust_max_depth {
             self.adjust_max_depth(elapsed_seconds, avg_depth);
         }
-        if let Ok((player, action, outcome,drop_outcome)) = self.play_turn_from_action(best_action) {
+        if let Ok((player, action, outcome)) = self.play_turn_from_action(best_action) {
             println!("-> {}: {}", player, action);
             if self.options.debug {
                 if outcome.is_useful_info() {
                     println!("# {}", outcome);
-                }
-                if drop_outcome.is_useful_info() {
-                    println!("# {}", drop_outcome);
                 }
                 println!("# Compute time: {:.1} sec", elapsed_seconds);
                 println!("# Average depth: {:.1}", avg_depth);
