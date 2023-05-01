@@ -15,13 +15,13 @@ fn main() {
         let h1 = units_health_weights_bias(9,10,100) * 10
                                 + ai_distance(2,1)
                                 - game_moves();
-        let h2 = -game_moves();
+        // let h2 = -game_moves();
         // options.heuristics.attacker_max = h1.clone();
         // options.heuristics.defender_min = h1;
         options.heuristics.set_attack_heuristics(h1);
-        options.heuristics.set_defense_heuristics(h2);
+        // options.heuristics.set_defense_heuristics(h2);
     }
-    // options.mutual_damage = true;
+    options.mutual_damage = true;
     // options.debug = true;
     options.adjust_max_depth = true;
     if cmd_opt == Some(String::from("auto")) {

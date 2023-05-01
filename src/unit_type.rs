@@ -34,7 +34,7 @@ impl UnitType {
             damage 9 (Virus => AI)\n\
             damage 6 (Virus => Tech,Program) (Tech => Virus)\n\
             damage 3 (AI,Program => any unit except Firewall)\n\
-            damage 1 (Firewall <=> any unit)\n\
+            damage 1 (Firewall <=> any unit) (Tech => any unit)\n\
         ")
     }
     pub fn damage_amount(&self, target: &Self) -> Health {
