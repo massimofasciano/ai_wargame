@@ -77,18 +77,20 @@ impl<T : HeuristicFn + 'static> Mul<T> for Heuristic {
 
 #[derive(Clone)]
 pub struct Heuristics {
-    pub attacker: Heuristic,
-    pub defender: Heuristic,
+    pub attacker_max: Heuristic,
+    pub attacker_min: Heuristic,
+    pub defender_max: Heuristic,
+    pub defender_min: Heuristic,
 }
 
-impl Heuristics {
-    fn new(attacker: Heuristic, defender: Heuristic) -> Self {
-        Self { attacker, defender }
-    }
-}
 impl Default for Heuristics {
     fn default() -> Self {
-        Self::new(units_health(),units_health())
+        Self { 
+            attacker_max: units_health(),
+            attacker_min: units_health(), 
+            defender_max: units_health(), 
+            defender_min: units_health() 
+        }
     }
 }
 

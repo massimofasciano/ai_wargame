@@ -512,7 +512,7 @@ impl Game {
             self.state.board.iter_unit_coords().filter_map(move|to| 
                 if from==to {None} else {Some(CoordPair::new(from,to))}))
     }
-    pub fn heuristic(&self, player: Player, _depth: usize) -> HeuristicScore {
+    pub fn heuristic(&self, player: Player, maximizing_player: bool, _depth: usize) -> HeuristicScore {
         let result = self.end_game_result();
         let moves = self.total_moves() as HeuristicScore;
         let score = match result {
@@ -527,10 +527,16 @@ impl Game {
             }
             // not finished so call appropriate heuristic
             None => {
-                let heuristic = if player.is_attacker() {
-                    self.options.heuristics.attacker.clone()
-                } else {
-                    self.options.heuristics.defender.clone()
+                // let heuristic = if player.is_attacker() {
+                //     self.options.heuristics.attacker.clone()
+                // } else {
+                //     self.options.heuristics.defender.clone()
+                // };
+                let heuristic = match (player.is_attacker(), maximizing_player) {
+                    (true, true) => self.options.heuristics.attacker_max.clone(),
+                    (true, false) => self.options.heuristics.attacker_min.clone(),
+                    (false, true) => self.options.heuristics.defender_max.clone(),
+                    (false, false) => self.options.heuristics.defender_min.clone(),
                 };
                 heuristic(self,player)
             }
@@ -556,7 +562,7 @@ impl Game {
             }
         }
         if timeout || self.options.max_depth.is_some() && depth >= self.options.max_depth.unwrap() || self.end_game_result().is_some() {
-            (self.heuristic(player,depth),None,depth as f32)
+            (self.heuristic(player,maximizing_player,depth),None,depth as f32)
         } else {
             let mut best_action = None;
             let mut best_score;
@@ -598,7 +604,7 @@ impl Game {
                 }
             }
             if total_count == 0 {
-                (self.heuristic(player,depth),None,depth as f32)
+                (self.heuristic(player,maximizing_player,depth),None,depth as f32)
                 // (best_score, best_action, depth as f32)
             } else {
                 #[cfg(feature="stats")]
@@ -620,7 +626,7 @@ impl Game {
             }
         }
         if timeout || self.options.max_depth.is_some() && depth >= self.options.max_depth.unwrap() || self.end_game_result().is_some() {
-            (self.heuristic(player,depth),None,depth as f32)
+            (self.heuristic(player,maximizing_player,depth),None,depth as f32)
         } else {
             let mut best_action = None;
             let mut best_score;
@@ -673,7 +679,7 @@ impl Game {
                 }
             }
             if total_count == 0 {
-                (self.heuristic(player,depth),None,depth as f32)
+                (self.heuristic(player,maximizing_player,depth),None,depth as f32)
                 // (best_score, best_action, depth as f32)
             } else {
                 #[cfg(feature="stats")]
