@@ -807,29 +807,6 @@ impl Game {
         }
     }
     pub fn console_play_turn_stdin(&mut self) {
-        loop {
-            match self.parse_move_stdin() {
-                Ok((from,to)) => {
-                    if self.console_play_turn(from, to) {
-                        break;
-                    } else {
-                        println!("Invalid move!");
-                        println!();
-                    }
-                },
-                Err(s) if s == "quit" || s == "exit" => {
-                    std::process::exit(0);
-                },
-                _ => {
-                    println!();
-                    println!("example input: a6 d9"); 
-                    println!();
-                    println!("{}",UnitType::units_description());
-                }
-            }
-        }
-    }
-    pub fn console_quick_suggestion(&self) {
         let mut options = self.options();
         options.max_depth = Some(4);
         options.max_seconds = Some(0.5);
@@ -837,6 +814,29 @@ impl Game {
         game_suggest.set_options(options);
         if let (_, Some(suggestion),_,_) = game_suggest.suggest_action() {
             println!("Suggestion: {}",suggestion);
+            loop {
+                match self.parse_move_stdin() {
+                    Ok((from,to)) => {
+                        if self.console_play_turn(from, to) {
+                            break;
+                        } else {
+                            println!("Invalid move!");
+                            println!();
+                        }
+                    },
+                    Err(s) if s == "quit" || s == "exit" => {
+                        std::process::exit(0);
+                    },
+                    _ => {
+                        println!();
+                        println!("example input: a6 d9"); 
+                        println!();
+                        println!("{}",UnitType::units_description());
+                    }
+                }
+            }
+        } else {
+            self.state.deadlock = true;
         }
     }
 }
