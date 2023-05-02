@@ -21,6 +21,7 @@ pub struct GameState {
     player: Player,
     board: Board,
     total_moves: usize,
+    deadlock : bool,
 }
 
 impl GameState {
@@ -29,6 +30,7 @@ impl GameState {
             player: Default::default(),
             board: Board::new(dim),
             total_moves: 0,
+            deadlock: false,
         }
     }
 }
@@ -44,6 +46,7 @@ impl GameState {
             player: self.player,
             total_moves: self.total_moves,
             board: self.board,
+            deadlock: self.deadlock,
         }
     }
 }
@@ -71,6 +74,8 @@ pub struct GameOptions {
     pub mutual_damage: bool,
     pub debug : bool,
     pub adjust_max_depth : bool,
+    pub move_while_engaged : bool,
+    pub move_only_forward : bool,
 }
 
 impl Default for Game {
@@ -183,21 +188,46 @@ impl Game {
         debug_assert_eq!(is_valid,true,"({},{}) is not valid for a {}x{} board",row,col,self.dim(),self.dim());
         is_valid
     }
-    pub fn is_valid_move(&mut self, from: Coord, to: Coord) -> bool {
-        self.neighbors(from, to) &&
+    pub fn is_valid_move(&self, from: Coord, to: Coord) -> bool {
+        self.are_in_range(from, to, 1) &&
         self[to].is_empty() && self[from].is_unit() &&
-        self.player() == self[from].player().unwrap()
+        self.player() == self[from].player().unwrap() &&
+        (self.options.move_while_engaged || !self.is_engaged(from)) &&
+        (!self.options.move_only_forward || self.is_moving_forward(from,to))
     }
-    pub fn neighbors(&self, coord0 : Coord, coord1 : Coord) -> bool {
-        coord0 != coord1 &&
-        self.is_valid_position(coord0) && self.is_valid_position(coord1) && 
-        (coord1.row - coord0.row).abs() <= 1 && (coord1.col - coord0.col).abs() <= 1
-    }
-    pub fn in_range(&self, range: u8, from : Coord, to : Coord) -> bool {
-        // no diagonals and same position not allowed
+    pub fn are_in_range(&self, from : Coord, to : Coord, range: Dim) -> bool {
         self.is_valid_position(from) && 
         self.is_valid_position(to) && 
-        ((to.row - from.row).abs() + (to.col - from.col).abs()) as u8 == range
+        from.is_in_range(to, range)
+    }
+    pub fn is_moving_forward(&self, from : Coord, to : Coord) -> bool {
+        if self.player().is_attacker() {
+            from.row-to.row > 0 || from.col-to.col > 0
+        } else {
+            to.row-from.row > 0 || to.col-from.col > 0
+        }
+    }
+    pub fn is_engaged(&self, coord: Coord) -> bool {
+        let my_cell = self.get_cell(coord);
+        if my_cell.is_none() {
+            return false;
+        }
+        let my_player = my_cell.unwrap().player();
+        if my_player.is_none() {
+            return false;
+        }
+        let my_player = my_player.unwrap();
+        coord.iter_neighbors().any(|neighbor|{
+            if let Some(cell) = self.get_cell(neighbor) {
+                if let Some(player) = cell.player() {
+                    my_player != player
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        })
     }
     pub fn unit_move(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,anyhow::Error> {
         if self.is_valid_move(from, to) {
@@ -223,9 +253,7 @@ impl Game {
         }
     }
     pub fn end_game_result(&self) -> Option<Player>{
-        if self.options.max_moves.is_some() && self.total_moves() >= self.options.max_moves.unwrap() {
-            // max moves reached: draw
-            // println!("DEBUG: reached max moves!");
+        if self.state.deadlock || self.options.max_moves.is_some() && self.total_moves() >= self.options.max_moves.unwrap() {
             return Some(self.best_score_player())
         } 
         assert_eq!(Player::cardinality(),2);
@@ -363,7 +391,7 @@ impl Game {
         }
     }
     pub fn unit_combat(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,anyhow::Error> {
-        if self.in_range(1, from, to) && 
+        if self.are_in_range(from, to, 1) && 
             self[from].is_unit() && 
             self[to].is_unit() 
         {
@@ -389,7 +417,7 @@ impl Game {
         }
     }
     pub fn unit_repair(&mut self, from: Coord, to: Coord) -> Result<ActionOutcome,anyhow::Error> {
-        if self.in_range(1, from, to) && 
+        if self.are_in_range(from, to, 1) && 
             self[from].is_unit() && 
             self[to].is_unit() 
         {
@@ -409,9 +437,9 @@ impl Game {
     }
     pub fn action_from_coords(&self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<Action,anyhow::Error> {
         let (from, to) = (from.into(),to.into());
-        if self.in_range(1, from, to) && 
+        if self.are_in_range(from, to, 1) && 
             self[from].is_unit() && 
-            self.player() == self[from].player().unwrap() 
+            self.player() == self[from].player().unwrap()
         {
             // it's our turn and we are acting on our own unit
             if from == to {
@@ -419,8 +447,8 @@ impl Game {
                 // Ok(Action::Pass)
                 // destination is same as source => skip/pass disabled
                 Err(anyhow!("can't pass"))
-            } else if self[to].is_empty() {
-                // destination empty so this is a move
+            } else if self.is_valid_move(from, to) {
+                // destination empty and move validated (not engaged, etc...)
                 Ok(Action::Move { from, to })
             } else if self[to].is_unit() {
                 // destination is a unit
@@ -529,11 +557,6 @@ impl Game {
             }
             // not finished so call appropriate heuristic
             None => {
-                // let heuristic = if player.is_attacker() {
-                //     self.options.heuristics.attacker.clone()
-                // } else {
-                //     self.options.heuristics.defender.clone()
-                // };
                 let heuristic = match (player.is_attacker(), maximizing_player) {
                     (true, true) => self.options.heuristics.attacker_max.clone(),
                     (true, false) => self.options.heuristics.attacker_min.clone(),
@@ -595,7 +618,7 @@ impl Game {
                 total_depth += rec_avg_depth;
                 total_count += 1;
                 // println!("DEBUG: depth={} best={:?} new={:?} new_action={:?}",depth, best_score,score,possible_action);
-                if maximizing_player && score > best_score || !maximizing_player && score < best_score {
+                if maximizing_player && score >= best_score || !maximizing_player && score <= best_score {
                     best_score = score;
                     best_action = Some(possible_action);
                 }
@@ -609,7 +632,6 @@ impl Game {
             }
             if total_count == 0 {
                 (self.heuristic(player,maximizing_player,depth),None,depth as f32)
-                // (best_score, best_action, depth as f32)
             } else {
                 #[cfg(feature="stats")]
                 {   // branching stats
@@ -734,7 +756,7 @@ impl Game {
             (best_score, best_action, total_depth / total_count as f32)
         }
     }
-    pub fn suggest_action(&mut self) -> (HeuristicScore, Action, f32, f32) {
+    pub fn suggest_action(&mut self) -> (HeuristicScore, Option<Action>, f32, f32) {
         let start_time = SystemTime::now();
         #[cfg(not(feature="rayon"))]
         let (score, suggestion, avg_depth) = 
@@ -745,7 +767,7 @@ impl Game {
         let (score, suggestion, avg_depth) = 
             self.suggest_action_rec_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
-        (score,suggestion.expect("don't know what to do!"),elapsed_seconds,avg_depth)
+        (score,suggestion,elapsed_seconds,avg_depth)
     }
     pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
         let branching_factor = 12; // we could update this live
@@ -766,18 +788,22 @@ impl Game {
         if self.options.adjust_max_depth {
             self.adjust_max_depth(elapsed_seconds, avg_depth);
         }
-        if let Ok((player, action, outcome)) = self.play_turn_from_action(best_action) {
-            println!("-> {}: {}", player, action);
-            if self.options.debug {
-                if outcome.is_useful_info() {
-                    println!("# {}", outcome);
+        if let Some(best_action) = best_action {
+            if let Ok((player, action, outcome)) = self.play_turn_from_action(best_action) {
+                println!("-> {}: {}", player, action);
+                if self.options.debug {
+                    if outcome.is_useful_info() {
+                        println!("# {}", outcome);
+                    }
+                    println!("# Compute time: {:.1} sec", elapsed_seconds);
+                    println!("# Average depth: {:.1}", avg_depth);
+                    println!("# Score: {}", score);
                 }
-                println!("# Compute time: {:.1} sec", elapsed_seconds);
-                println!("# Average depth: {:.1}", avg_depth);
-                println!("# Score: {}", score);
+            } else {
+                panic!("play turn should work");
             }
         } else {
-            panic!("play turn should work");
+            self.state.deadlock = true;
         }
     }
     pub fn console_play_turn_stdin(&mut self) {
@@ -809,8 +835,9 @@ impl Game {
         options.max_seconds = Some(0.5);
         let mut game_suggest = self.clone();
         game_suggest.set_options(options);
-        let (_, suggestion,_,_) = game_suggest.suggest_action();
-        println!("Suggestion: {}",suggestion);
+        if let (_, Some(suggestion),_,_) = game_suggest.suggest_action() {
+            println!("Suggestion: {}",suggestion);
+        }
     }
 }
 

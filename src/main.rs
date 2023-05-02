@@ -6,7 +6,7 @@ fn main() {
     let cmd_opt = std::env::args().nth(1);
 
     let mut options = GameOptions::default();
-    // options.dim = 5;
+    options.dim = 7;
     options.max_depth = Some(6);
     options.max_moves = Some(150);
     options.max_seconds = Some(5.0);
@@ -21,9 +21,11 @@ fn main() {
         options.heuristics.set_attack_heuristics(h1);
         // options.heuristics.set_defense_heuristics(h2);
     }
+    // options.move_while_engaged = true;
     options.mutual_damage = true;
+    options.move_only_forward = true;
     // options.debug = true;
-    options.adjust_max_depth = true;
+    // options.adjust_max_depth = true;
     if cmd_opt == Some(String::from("auto")) {
         options.debug = true;
     }

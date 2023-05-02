@@ -55,6 +55,15 @@ impl Coord {
         let diag = Coord::from_dim_diag(range);
         CoordPair::new(*self-diag,*self+diag)
     }
+    pub fn is_in_range(&self, to : Coord, range: Dim) -> bool {
+        let from = *self;
+        range >= 0 &&
+        ((to.row - from.row).abs() + (to.col - from.col).abs()) as Dim == range
+    }
+    pub fn iter_neighbors<'a>(&'a self) -> impl Iterator<Item = Coord> + 'a {
+        let neighbor_coords = vec![(0,-1),(-1,0),(1,0),(0,1)];
+        neighbor_coords.into_iter().map(|c|Coord::from_tuple(c)+*self)
+    }
 }
 
 impl std::fmt::Display for Coord {
