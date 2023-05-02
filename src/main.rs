@@ -36,7 +36,7 @@ fn main() {
 
     loop {
         println!();
-        game.pretty_print();
+        game.console_pretty_print();
         println!();
 
         if let Some(winner) = game.end_game_result() {
@@ -46,16 +46,16 @@ fn main() {
 
         if cmd_opt == Some(String::from("auto")) {
             // computer plays both sides...
-            game.computer_play_turn();
+            game.console_computer_play_turn();
         } else {
             // human plays...
-            game.console_play_turn_stdin();
+            game.console_human_play_turn();
             // show intermediate board state...
             println!();
-            game.pretty_print();
+            game.console_pretty_print();
             println!();
             // computer plays...
-            game.computer_play_turn();
+            game.console_computer_play_turn();
         }
     }
 }
