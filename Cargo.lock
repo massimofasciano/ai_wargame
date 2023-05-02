@@ -13,13 +13,14 @@ dependencies = [
 
 [[package]]
 name = "ai_wargame"
-version = "0.12.3"
+version = "0.12.4"
 dependencies = [
  "anyhow",
  "cfg-if",
  "derive_more",
  "duplicate",
  "enum-iterator",
+ "instant",
  "rand",
  "rayon",
  "regex",
@@ -166,6 +167,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee512640fe35acbfb4bb779db6f0d80704c2cacfa2e39b601ef3e3f47d1ae4c7"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "instant"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a5bbe824c507c5da5956355e86a746d82e0e1464f65d862cc5e71da70e94b2c"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]

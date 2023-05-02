@@ -2,7 +2,8 @@ use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, 
 use anyhow::anyhow;
 use smart_default::SmartDefault;
 use rand::{seq::{SliceRandom}};
-use std::{time::SystemTime, sync::Arc};
+use std::sync::Arc;
+use instant::Instant;
 #[cfg(feature="stats")]
 use std::{sync::Mutex, collections::HashMap};
 #[cfg(feature="rayon")]
@@ -531,10 +532,10 @@ impl Game {
         }
         score
     }
-    pub fn suggest_action_rec(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
+    pub fn suggest_action_rec(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
         let mut timeout = false;
         if let Some(max_seconds) = self.options.max_seconds {
-            let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
+            let elapsed_seconds = Instant::now().duration_since(start_time).as_secs_f32();
             if elapsed_seconds > max_seconds {
                 timeout = true;
             }
@@ -596,7 +597,7 @@ impl Game {
         }
     }
     #[cfg(feature="rayon")]
-    pub fn suggest_action_rec_par(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: SystemTime) -> (HeuristicScore, Option<Action>, f32) {
+    pub fn suggest_action_rec_par(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
         assert_eq!(maximizing_player,true,"call only at top level");
         let mut best_action = None;
         let mut best_score = heuristics::MIN_HEURISTIC_SCORE;
@@ -633,14 +634,14 @@ impl Game {
         }
     }
     pub fn suggest_action(&mut self) -> (HeuristicScore, Option<Action>, f32, f32) {
-        let start_time = SystemTime::now();
+        let start_time = Instant::now();
         #[cfg(not(feature="rayon"))]
         let (score, suggestion, avg_depth) = 
             self.suggest_action_rec(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         #[cfg(feature="rayon")]
         let (score, suggestion, avg_depth) = 
             self.suggest_action_rec_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
-        let elapsed_seconds = SystemTime::now().duration_since(start_time).unwrap().as_secs_f32();
+        let elapsed_seconds = Instant::now().duration_since(start_time).as_secs_f32();
         (score,suggestion,elapsed_seconds,avg_depth)
     }
     pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
