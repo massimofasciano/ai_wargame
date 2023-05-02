@@ -10,7 +10,9 @@ You can assume the following initial configuration on a 5x5 board:
  E:   .   .  aP9 aV9 aA9
 ```
 Attacker has 1 AI, 2 Viruses, 2 Programs, 1 Firewall
+
 Defender has 1 AI, 2 Techs, 2 Firewalls, 1 Program
+
 Attacker starts.
 
 ## Rules:
