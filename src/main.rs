@@ -1,8 +1,9 @@
 use ai_wargame::{Game, heuristics::{self}, GameOptions};
 
 fn main() {
-    #[cfg(feature="rayon")]
-    rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
+    // #[cfg(feature="rayon")]
+    // rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
+
     let cmd_opt = std::env::args().nth(1);
 
     let mut options = GameOptions::default();
@@ -22,7 +23,7 @@ fn main() {
         // options.heuristics.set_defense_heuristics(_h2);
     }
     // options.move_while_engaged = true;
-    options.move_while_engaged_full_health = true;
+    // options.move_while_engaged_full_health = true;
     options.mutual_damage = true;
     options.move_only_forward = true;
     // options.debug = true;

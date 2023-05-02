@@ -524,16 +524,16 @@ impl Game {
         }
     }
     pub fn pretty_print(&self) {
-        if self.options.debug {
-            if let Some(max_moves) = self.options.max_moves {
-                if self.total_moves() >= max_moves {
-                    println!("# maximum moves played ({})",max_moves);
-                } else {
-                    println!("# {}/{} moves played",self.total_moves(),max_moves);
-                }
+        if let Some(max_moves) = self.options.max_moves {
+            if self.total_moves() >= max_moves {
+                println!("# maximum moves played ({})",max_moves);
             } else {
-                println!("# {} moves played",self.total_moves());
+                println!("# {}/{} moves played",self.total_moves(),max_moves);
             }
+        } else {
+            println!("# {} moves played",self.total_moves());
+        }
+        if self.options.debug {
             if let Some(max_depth) = self.options.max_depth {
                 println!("# Max search depth: {}",max_depth);
             }
@@ -557,6 +557,7 @@ impl Game {
             }            
             println!("# Next player: {}",self.player());
         }
+        println!();
         print!("    ");
         for col in 0..self.dim() {
             print!(" {:>2} ",col);
@@ -844,7 +845,7 @@ impl Game {
                     }
                     println!("# Compute time: {:.1} sec", elapsed_seconds);
                     println!("# Average depth: {:.1}", avg_depth);
-                    println!("# Score: {}", score);
+                    println!("# Heuristic score: {}", score);
                 }
             } else {
                 panic!("play turn should work");
