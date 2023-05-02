@@ -69,5 +69,14 @@ impl Unit {
     pub fn score(&self) -> HeuristicScore {
         self.unit_type.score()
     }
+    pub fn can_move_back(&self) -> bool {
+        self.unit_type.can_move_back()
+    }
+    pub fn can_move_while_engaged(&self) -> bool {
+        self.unit_type.can_move_while_engaged()
+    }
+    pub fn initial_health(&self) -> Health {
+        self.unit_type.initial_health()
+    }
 }
 

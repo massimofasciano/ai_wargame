@@ -18,10 +18,24 @@ impl UnitType {
         use UnitType::*;
         match self {
             AI => 50,
-            Virus => 20,
-            Tech => 20,
+            Virus => 25,
+            Tech => 25,
             Firewall => 10,
             Program => 10,
+        }
+    }
+    pub fn can_move_back(&self) -> bool {
+        use UnitType::*;
+        match self {
+            Virus | Tech => true,
+            _ => false,
+        }
+    }
+    pub fn can_move_while_engaged(&self) -> bool {
+        use UnitType::*;
+        match self {
+            Virus | Tech => true,
+            _ => false,
         }
     }
     pub fn initial_health(&self) -> Health {

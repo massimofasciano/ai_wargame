@@ -75,6 +75,7 @@ pub struct GameOptions {
     pub debug : bool,
     pub adjust_max_depth : bool,
     pub move_while_engaged : bool,
+    pub move_while_engaged_full_health : bool,
     pub move_only_forward : bool,
 }
 
@@ -96,18 +97,32 @@ impl Game {
         };
         assert!(dim >= 4,"initial setup requires minimum of 4x4 board");
         use UnitType::*;
-        let init = vec![
+        // let init_shared = vec![
+        //     (0,0,AI),(0,1,Virus),(0,2,Program),
+        //     (1,0,Tech),(1,1,Firewall),
+        //     (2,0,Program),
+        // ];
+        // let init_p1 = init_shared.clone();
+        // let init_p2 = init_shared.clone();
+        let init_p1 = vec![
             (0,0,AI),(0,1,Virus),(0,2,Program),
-            (1,0,Tech),(1,1,Firewall),
+            (1,0,Virus),(1,1,Firewall),
             (2,0,Program),
+        ];
+        let init_p2 = vec![
+            (0,0,AI),(0,1,Tech),(0,2,Firewall),
+            (1,0,Tech),(1,1,Program),
+            (2,0,Firewall),
         ];
         assert_eq!(Player::cardinality(),2);
         let mut p_all = Player::all();
         let p1 = p_all.next().unwrap();
         let p2 = p_all.next().unwrap();
-        for (row,col,unit_type) in init {
-            game.set_cell((row,col),BoardCell::new_unit(p2, unit_type));
+        for (row,col,unit_type) in init_p1 {
             game.set_cell((dim-1-row,dim-1-col),BoardCell::new_unit(p1, unit_type));
+        }
+        for (row,col,unit_type) in init_p2 {
+            game.set_cell((row,col),BoardCell::new_unit(p2, unit_type));
         }
         game
     }
@@ -192,8 +207,40 @@ impl Game {
         self.are_in_range(from, to, 1) &&
         self[to].is_empty() && self[from].is_unit() &&
         self.player() == self[from].player().unwrap() &&
-        (self.options.move_while_engaged || !self.is_engaged(from)) &&
-        (!self.options.move_only_forward || self.is_moving_forward(from,to))
+        (self.options.move_while_engaged || self.can_move_while_engaged(from)
+            || (self.options.move_while_engaged_full_health && self.is_full_health(from))
+            || !self.is_engaged(from)) &&
+        (!self.options.move_only_forward || self.can_move_back(from) || self.is_moving_forward(from,to))
+    }
+    pub fn is_full_health(&self, coord: Coord) -> bool {
+        if let Some(cell) = self.get_cell(coord) {
+            if let Some(unit) = cell.unit() {
+                if unit.health == unit.initial_health() {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+    pub fn can_move_back(&self, coord: Coord) -> bool {
+        if let Some(cell) = self.get_cell(coord) {
+            if let Some(unit) = cell.unit() {
+                if unit.can_move_back() {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+    pub fn can_move_while_engaged(&self, coord: Coord) -> bool {
+        if let Some(cell) = self.get_cell(coord) {
+            if let Some(unit) = cell.unit() {
+                if unit.can_move_while_engaged() {
+                    return true;
+                }
+            }
+        }
+        false
     }
     pub fn are_in_range(&self, from : Coord, to : Coord, range: Dim) -> bool {
         self.is_valid_position(from) && 
