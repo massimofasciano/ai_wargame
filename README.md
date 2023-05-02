@@ -36,11 +36,13 @@ Units are said to be engaged in combat if an opposing unit is adjacent (in any o
 A unit cannot move if engaged in combat, except the Virus and the Tech.
 
 The game ends when any of these conditions is true:
+
 - a player loses their AI
 - a player cannot perform any action
 - a pre-determined number of moves has been reached (150 is a good number)
 
 To determine the winner at the end of the game, these rules are applied:
+
 - a player wins if their AI is alive when the other AI is destroyed
 - a score is calculated based on the remaining units (see scoring table). Highest wins.
 - the defender wins if the scores are equal (because attacker starts first)
@@ -75,6 +77,7 @@ Program =>
     _ => 3,
 ```
 A few important details:
+
 - the Virus can destroy the AI in 1 attack (9 points)
 - the Firewall is good at absorbing attacks but bad at damaging other units
 - Tech and Virus are equal in combat against each other
