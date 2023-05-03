@@ -1,4 +1,4 @@
 [build]
 #rustflags = ["-C", "target-cpu=native"]  
 #rustflags = ["-C", "target-cpu=haswell"]  
-rustflags = ["--remap-path-prefix","/home/fasciano/=/root/"]
+rustflags = ["--remap-path-prefix","/home/fasciano/=/root/","--remap-path-prefix","/home/fasciano/Programmation/Rust/=/root/"]
