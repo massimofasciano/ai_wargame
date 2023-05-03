@@ -145,6 +145,9 @@ impl Game {
     pub fn set_options(&mut self, options: GameOptions) {
         self.options = Arc::new(options);
     }
+    pub fn set_deadlock(&mut self, deadlock: bool) {
+        self.state.deadlock = deadlock;
+    }
     pub fn remove_cell(&mut self, coord: Coord) -> Option<BoardCell> {
         if self.is_valid_position(coord) {
             self.state.board.remove(coord)
