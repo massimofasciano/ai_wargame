@@ -133,7 +133,13 @@ impl Game {
     pub fn dim(&self) -> Dim {
         self.options.dim
     }
-    pub fn options(&self) -> GameOptions {
+    pub fn stats(&self) -> Arc<Mutex<GameStats>> {
+        self.stats.clone()
+    }
+    pub fn options(&self) -> Arc<GameOptions> {
+        self.options.clone()
+    }
+    pub fn clone_options(&self) -> GameOptions {
         self.options.as_ref().clone()
     }
     pub fn set_options(&mut self, options: GameOptions) {
@@ -646,7 +652,7 @@ impl Game {
     }
     pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
         let branching_factor = 12; // we could update this live
-        let mut options = self.options();
+        let mut options = self.clone_options();
         if options.max_depth.is_some() && avg_depth < options.max_depth.unwrap() as f32 * 0.9 {
             options.max_depth = Some(options.max_depth.unwrap()-1);
         } else if options.max_depth.is_some() && options.max_seconds.is_some() && elapsed_seconds < self.options.max_seconds.unwrap() / (branching_factor as f32 * 1.2) {
