@@ -28,8 +28,17 @@ fn main() {
     options.move_only_forward = true;
     // options.debug = true;
     options.adjust_max_depth = true;
-    if cmd_opt == Some(String::from("auto")) {
-        options.debug = true;
+
+    match cmd_opt.as_deref() {
+        Some("auto") => {
+            options.debug = true;
+        },
+        Some("defender") | Some("defend") | Some("attacker") | Some("attack") | None => {},
+        Some(_) => {
+            let my_name = option_env!("CARGO_PKG_NAME").unwrap_or("AI_Wargame");
+            eprintln!("usage: {} auto|attack(er)|defend(er)",my_name);
+            std::process::exit(1);
+        }
     }
         
     let mut game = Game::new(options);
@@ -44,18 +53,25 @@ fn main() {
             break;
         }
 
-        if cmd_opt == Some(String::from("auto")) {
-            // computer plays both sides...
-            game.console_computer_play_turn();
-        } else {
-            // human plays...
-            game.console_human_play_turn();
-            // show intermediate board state...
-            println!();
-            game.console_pretty_print();
-            println!();
-            // computer plays...
-            game.console_computer_play_turn();
+        match cmd_opt.as_deref() {
+            Some("auto") => {
+                game.console_computer_play_turn();
+            },
+            Some("defender") | Some("defend") => {
+                game.console_computer_play_turn();
+                println!();
+                game.console_pretty_print();
+                println!();
+                game.console_human_play_turn();
+            },
+            Some("attacker") | Some("attack") | None => {
+                game.console_human_play_turn();
+                println!();
+                game.console_pretty_print();
+                println!();
+                game.console_computer_play_turn();
+            }
+            Some(_) => {}
         }
     }
 }
