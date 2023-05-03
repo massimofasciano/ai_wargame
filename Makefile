@@ -76,6 +76,7 @@ dist-wasi: wasi
 	cd dist ; zip -9 ai_wargame_wasm.zip ai_wargame.wasm
 	rm -f dist/ai_wargame.wasm
 
+.PHONY : dist
 dist: dist-linux dist-windows dist-wasi
 
 dist-docker: dist-mac-intel dist-mac-arm
