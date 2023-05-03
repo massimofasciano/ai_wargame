@@ -1,6 +1,6 @@
 [package]
 name = "ai_wargame"
-version = "0.12.8"
+version = "0.12.9"
 edition = "2021"
 
 [dependencies]
@@ -23,13 +23,11 @@ opt-level = 3
 lto = true
 debug = 0
 codegen-units = 1
+# strip must be commented out to cross compile for mac
+strip = true
 
 [features]
 default = ["rand-actions", "board_map", "stats"]
-#default = ["board_map", "rayon"]
-#default = ["rand-actions", "board_map", "rayon"]
-#default = ["rand-actions", "board_array"]
-#default = ["rand-actions", "board_vec"]
 rand-actions = []
 board_vec = []
 board_array = []

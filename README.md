@@ -31,6 +31,7 @@ All units start with 9 points of health and are removed after combat if their he
 Health cannot go above 9 or below 0.
 When combat occurs between opposing units (X attacks Y), X damages Y but Y also damages X according to the same damage tables (mutual combat).
 When repair happens between friendly units, the initiator repairs the target (not bi-directional).
+You cannot repair an opposing unit or attack a friendly unit.
 
 Units are said to be engaged in combat if an opposing unit is adjacent (in any of the 4 directions).
 A unit cannot move if engaged in combat, except the Virus and the Tech.
@@ -100,7 +101,7 @@ These are the only allowed repairs.
 
 ### Common strategies
 
-- A Tech unit behind AI, Firewall, Program can make them invincible except to a Virus.
+- A Tech unit behind AI, Firewall, Program can make them invincible (except to a Virus for AI and Program).
 - A Virus can move back to it's AI to get slowly repaired
 - A Tech can move around in any direction to help units in need of repair
 - The AI cannot move back so it can be blocked by some units and then destroyed by a Virus
