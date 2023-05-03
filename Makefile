@@ -6,7 +6,7 @@ run:
 
 clean:
 	cargo clean
-	docker rmi joseluisq/rust-linux-darwin-builder
+	@echo "after docker builds, might need to run: sudo rm -rf target/*-apple-darwin"
 
 rayon:
 	cargo build --release --features rayon
@@ -36,7 +36,6 @@ mac-intel:
     --workdir /root/src \
       joseluisq/rust-linux-darwin-builder:1.69.0 \
         sh -c "cargo build --release --target x86_64-apple-darwin --features rayon"
-	# docker rmi joseluisq/rust-linux-darwin-builder
 
 mac-arm:
 	# cargo build --release --target aarch64-apple-darwin --features rayon
@@ -45,7 +44,6 @@ mac-arm:
     --workdir /root/src \
       joseluisq/rust-linux-darwin-builder:1.69.0 \
         sh -c "cargo build --release --target aarch64-apple-darwin --features rayon"
-	# docker rmi joseluisq/rust-linux-darwin-builder
 
 dist-windows: windows-rayon
 	rm -f dist/ai_wargame_win.zip
@@ -81,3 +79,8 @@ dist-wasi: wasi
 dist: dist-linux dist-windows dist-wasi
 
 dist-docker: dist-mac-intel dist-mac-arm
+
+clean-docker:
+	# check the image id (joseluisq/rust-linux-darwin-builder:1.69.0)
+	docker rmi 30eb5e48dfa2
+
