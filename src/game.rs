@@ -15,6 +15,7 @@ use std::{sync::Mutex, collections::HashMap};
 use rayon::prelude::*;
 
 pub mod console;
+pub mod web;
 
 #[derive(Debug, Clone)]
 pub struct Game {
