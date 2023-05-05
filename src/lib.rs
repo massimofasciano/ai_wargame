@@ -9,7 +9,7 @@ pub mod actions;
 pub mod coord;
 pub mod heuristics;
 
-type Dim = i8;
+pub type Dim = i8;
 pub use coord::{Coord, CoordPair, CoordTuple};
 type Health = u8;
 pub use game::{Game,GameOptions};

@@ -1,4 +1,4 @@
-use crate::{Game, Coord, UnitType, IsUsefulInfo};
+use crate::{Game, Coord, UnitType};
 
 use std::io::Write as IoWrite;
 use std::io::{stdout,stdin};
@@ -16,17 +16,9 @@ impl Game {
         parsed.ok_or(input)
     }
     pub fn console_human_play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
-        if let Ok((player, action, outcome)) = self.play_turn_from_coords(from, to) {
-            println!("{}: {}", player, action);
-            if self.options.debug {
-                if outcome.is_useful_info() {
-                    println!("{}", outcome);
-                }
-            }
-            true
-        } else {
-            false
-        }
+        let result = self.human_play_turn_from_coords(Some(&mut stdout()), from, to).expect("no errors on stdout");
+        stdout().flush().expect("no errors on stdout");
+        result
     }
     pub fn console_human_play_turn(&mut self) {
         let mut options = self.clone_options();

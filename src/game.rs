@@ -726,6 +726,21 @@ impl Game {
         writeln!(w)?;
         self.pretty_print_board(w)
     }
+    pub fn human_play_turn_from_coords(&mut self, opt_w: Option<&mut impl IoWrite>, from: impl Into<Coord>, to: impl Into<Coord>) -> IoResult<bool> {
+        if let Ok((player, action, outcome)) = self.play_turn_from_coords(from, to) {
+            if let Some(w) = opt_w {
+                writeln!(w,"{}: {}", player, action)?;
+                if self.options.debug {
+                    if outcome.is_useful_info() {
+                        writeln!(w,"{}", outcome)?;
+                    }
+                }
+            }
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
     pub fn computer_play_turn(&mut self, opt_w: Option<&mut impl IoWrite>) -> IoResult<()> {
         let (score,best_action,elapsed_seconds,avg_depth) = self.suggest_action();
         #[cfg(feature="stats")]
