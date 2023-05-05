@@ -672,36 +672,36 @@ impl Game {
     pub fn pretty_print_info(&self, w: &mut impl IoWrite) -> IoResult<()> {
         if let Some(max_moves) = self.options.max_moves {
             if self.total_moves() >= max_moves {
-                writeln!(w,"# maximum moves played ({})",max_moves)?;
+                writeln!(w,"maximum moves played ({})",max_moves)?;
             } else {
-                writeln!(w,"# {}/{} moves played",self.total_moves(),max_moves)?;
+                writeln!(w,"{}/{} moves played",self.total_moves(),max_moves)?;
             }
         } else {
-            writeln!(w,"# {} moves played",self.total_moves())?;
+            writeln!(w,"{} moves played",self.total_moves())?;
         }
         if self.options.debug {
             if let Some(max_depth) = self.options.max_depth {
-                writeln!(w,"# Max search depth: {}",max_depth)?;
+                writeln!(w,"Max search depth: {}",max_depth)?;
             }
             if let Some(max_seconds) = self.options.max_seconds {
-                writeln!(w,"# Max search time: {:.1} sec",max_seconds)?;
+                writeln!(w,"Max search time: {:.1} sec",max_seconds)?;
             }
             #[cfg(feature="stats")]
             {
                 let stats = self.stats.lock().expect("should get a lock");
-                writeln!(w,"# Total evals at each depth: {:?}",stats.depth_counts)?;
+                writeln!(w,"Total evals at each depth: {:?}",stats.depth_counts)?;
                 let (dc, ct) = stats.depth_counts.iter().fold((0,0),|(dc,ct),(d,c)| (dc+d*c,ct+c));
                 if ct > 0 {
-                    writeln!(w,"# Average eval depth: {:.1}",dc as f32/ct as f32)?;
+                    writeln!(w,"Average eval depth: {:.1}",dc as f32/ct as f32)?;
                 }
                 if self.total_moves() > 0 {
-                    writeln!(w,"# Average eval time: {:.1}",stats.total_seconds as f32/self.total_moves() as f32)?; 
+                    writeln!(w,"Average eval time: {:.1}",stats.total_seconds as f32/self.total_moves() as f32)?; 
                 }
                 if stats.total_effective_branches > 0 {
-                    writeln!(w,"# Average branching factor: {:.1}",stats.total_moves_per_effective_branch as f32/stats.total_effective_branches as f32)?; 
+                    writeln!(w,"Average branching factor: {:.1}",stats.total_moves_per_effective_branch as f32/stats.total_effective_branches as f32)?; 
                 }
             }            
-            writeln!(w,"# Next player: {}",self.player())?;
+            writeln!(w,"Next player: {}",self.player())?;
         }
         Ok(())
     }
@@ -738,14 +738,14 @@ impl Game {
         if let Some(best_action) = best_action {
             if let Ok((player, action, outcome)) = self.play_turn_from_action(best_action) {
                 if let Some(w) = opt_w {
-                    writeln!(w,"-> {}: {}", player, action)?;
+                    writeln!(w,"{}: {}", player, action)?;
                     if self.options.debug {
                         if outcome.is_useful_info() {
-                            writeln!(w,"# {}", outcome)?;
+                            writeln!(w,"{}", outcome)?;
                         }
-                        writeln!(w,"# Compute time: {:.1} sec", elapsed_seconds)?;
-                        writeln!(w,"# Average depth: {:.1}", avg_depth)?;
-                        writeln!(w,"# Heuristic score: {}", score)?;
+                        writeln!(w,"Compute time: {:.1} sec", elapsed_seconds)?;
+                        writeln!(w,"Average depth: {:.1}", avg_depth)?;
+                        writeln!(w,"Heuristic score: {}", score)?;
                     }
                 }
             } else {

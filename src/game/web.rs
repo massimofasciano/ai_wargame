@@ -15,6 +15,7 @@ impl Game {
         write!(w,"<thead>")?;
         write!(w,"<tr>")?;
         write!(w,"<th colspan={half} class=\"{css_class}_info\">")?;
+        write!(w,"<div class=\"{css_class}_info_moves\">")?;
         if let Some(max_moves) = self.options.max_moves {
             if self.total_moves() >= max_moves {
                 write!(w,"maximum moves played ({})",max_moves)?;
@@ -24,9 +25,12 @@ impl Game {
         } else {
             write!(w,"{} moves played",self.total_moves())?;
         }
+        write!(w,"</div>")?;
         write!(w,"</th>")?;
         write!(w,"<th colspan={half} class=\"{css_class}_info\">")?;
+        write!(w,"<div class=\"{css_class}_info_next\">")?;
         write!(w,"Next player: {}",self.player())?;
+        write!(w,"</div>")?;
         write!(w,"</th>")?;
         write!(w,"</tr>")?;
         write!(w,"<tr>")?;

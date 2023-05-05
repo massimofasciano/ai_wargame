@@ -17,10 +17,10 @@ impl Game {
     }
     pub fn console_human_play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
         if let Ok((player, action, outcome)) = self.play_turn_from_coords(from, to) {
-            println!("-> {}: {}", player, action);
+            println!("{}: {}", player, action);
             if self.options.debug {
                 if outcome.is_useful_info() {
-                    println!("# {}", outcome);
+                    println!("{}", outcome);
                 }
             }
             true
