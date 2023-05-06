@@ -18,29 +18,42 @@ impl UnitType {
     pub fn all() -> enum_iterator::All<Self> {
         enum_iterator::all()
     }
-    pub fn stats_table(legend: Option<&str>, stat_fn: fn (&Self,&Self) -> Health) -> Vec<Vec<String>> {
+    pub fn stats_table(
+            legend: Option<&str>, 
+            stat_fn: impl Fn (&Self,&Self) -> Health,
+            format_header: impl Fn (&String) -> String,
+            format_data: impl Fn (&String) -> String,
+        ) -> Vec<Vec<String>> {
         let mut result : Vec<Vec<String>> = Vec::new();
         let mut targets = if let Some(legend) = legend {
             vec![legend.to_string()]
         } else {
             vec!["".to_string()]
         };
-        targets.extend(Self::all().map(|t|t.to_string()));
+        targets.extend(Self::all().map(|t|format_header(&t.to_string())));
         result.push(targets);
         for source in Self::all() {
             let mut targets = vec![source.to_string()];
             if Self::all().map(|t|stat_fn(&source,&t)).sum::<Health>() != 0 {
-                targets.extend(Self::all().map(|t|stat_fn(&source,&t).to_string()));
+                targets.extend(Self::all().map(|t|format_data(&stat_fn(&source,&t).to_string())));
                 result.push(targets);
             }
         }
         result
     }
-    pub fn damage_table(legend: Option<&str>) -> Vec<Vec<String>> {
-        Self::stats_table(legend, Self::damage_amount)
+    pub fn damage_table(
+        legend: Option<&str>, 
+        format_header: impl Fn (&String) -> String,
+        format_data: impl Fn (&String) -> String,
+    ) -> Vec<Vec<String>> {
+        Self::stats_table(legend, Self::damage_amount, format_header, format_data)
     }
-    pub fn repair_table(legend: Option<&str>) -> Vec<Vec<String>> {
-        Self::stats_table(legend, Self::repair_amount)
+    pub fn repair_table(
+        legend: Option<&str>, 
+        format_header: impl Fn (&String) -> String,
+        format_data: impl Fn (&String) -> String,
+    ) -> Vec<Vec<String>> {
+        Self::stats_table(legend, Self::repair_amount, format_header, format_data)
     }
     pub fn can_move_back(&self) -> bool {
         use UnitType::*;

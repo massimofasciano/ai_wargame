@@ -47,10 +47,14 @@ impl Game {
                         println!();
                         println!("Damage table:");
                         let legend = Some("from / to");
-                        Self::console_table(10,UnitType::damage_table(legend));
+                        let width = 10;
+                        let tfmt = ToString::to_string;
+                        Self::console_table(width, 
+                            UnitType::damage_table(legend,tfmt,tfmt));
                         println!();
                         println!("Repair table:");
-                        Self::console_table(10,UnitType::repair_table(legend));
+                        Self::console_table(width, 
+                            UnitType::repair_table(legend,tfmt,tfmt));
                         println!();
                     }
                 }
@@ -59,10 +63,6 @@ impl Game {
             self.state.deadlock = true;
         }
     }
-    pub fn console_computer_play_turn(&mut self) {
-        self.computer_play_turn(Some(&mut stdout())).expect("no errors on stdout");
-        stdout().flush().expect("no errors on stdout");
-    }
     pub fn console_table(width: usize, table: Vec<Vec<String>>) {
         for row in table {
             for cell in row {
@@ -70,5 +70,9 @@ impl Game {
             }
             println!();
         }
+    }
+    pub fn console_computer_play_turn(&mut self) {
+        self.computer_play_turn(Some(&mut stdout())).expect("no errors on stdout");
+        stdout().flush().expect("no errors on stdout");
     }
 }
