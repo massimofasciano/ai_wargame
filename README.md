@@ -40,7 +40,7 @@ The game ends when any of these conditions is true:
 
 - a player loses their AI
 - a player cannot perform any action
-- a pre-determined number of moves has been reached (100 is a good number)
+- a pre-determined number of moves has been reached (default is 100)
 
 To determine the winner at the end of the game, these rules are applied:
 
@@ -52,21 +52,13 @@ To determine the winner at the end of the game, these rules are applied:
 
 ### Damage tables for attacker to defender
 ```
-AI => 
-    Firewall => 1,
-    _ => 3,
-Virus => 
-    AI => 9,
-    Tech | Program => 6,
-    Virus | Firewall => 1,
-Tech => 
-    Virus => 6,
-    _ => 1,
-Firewall => 
-    _ => 1,
-Program => 
-    Firewall => 1,
-    _ => 3,
+Damage table:
+ from / to        AI     Virus      Tech  Firewall   Program
+        AI         3         3         3         1         3
+     Virus         9         1         6         1         6
+      Tech         1         6         1         1         1
+  Firewall         1         1         1         1         1
+   Program         3         3         3         1         3
 ```
 A few important details:
 
@@ -78,13 +70,10 @@ A few important details:
 
 ### Repair tables for friendly units
 ```
-Tech => 
-    AI | Firewall | Program => 3,
-    _ => 0,
-AI  => 
-    Virus | Tech => 1,
-    _ => 0,
-_ => 0,
+Repair table:
+ from / to        AI     Virus      Tech  Firewall   Program
+        AI         0         1         1         0         0
+      Tech         3         0         0         3         3
 ```
 As you can see, the Tech can repair AI, Firewall and Program by 3 points.
 The AI can repair the Virus and Tech by 1 point.

@@ -45,7 +45,13 @@ impl Game {
                         println!();
                         println!("example input: a6 d9"); 
                         println!();
-                        println!("{}",UnitType::units_description());
+                        println!("Damage table:");
+                        let legend = Some("from / to");
+                        Self::console_table(10,UnitType::damage_table(legend));
+                        println!();
+                        println!("Repair table:");
+                        Self::console_table(10,UnitType::repair_table(legend));
+                        println!();
                     }
                 }
             }
@@ -56,5 +62,13 @@ impl Game {
     pub fn console_computer_play_turn(&mut self) {
         self.computer_play_turn(Some(&mut stdout())).expect("no errors on stdout");
         stdout().flush().expect("no errors on stdout");
+    }
+    pub fn console_table(width: usize, table: Vec<Vec<String>>) {
+        for row in table {
+            for cell in row {
+                print!("{:>width$}",cell);
+            }
+            println!();
+        }
     }
 }

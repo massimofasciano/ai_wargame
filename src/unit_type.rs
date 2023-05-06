@@ -1,6 +1,7 @@
 use crate::{DisplayFirstLetter, Health};
+use enum_iterator::Sequence;
 
-#[derive(Debug, PartialEq, PartialOrd,Default, Clone, Copy)]
+#[derive(Debug, PartialEq, PartialOrd,Default, Clone, Copy, Sequence)]
 #[derive(derive_more::Display)]
 pub enum UnitType {
     AI,
@@ -14,6 +15,33 @@ pub enum UnitType {
 impl DisplayFirstLetter for UnitType {}
 
 impl UnitType {
+    pub fn all() -> enum_iterator::All<Self> {
+        enum_iterator::all()
+    }
+    pub fn stats_table(legend: Option<&str>, stat_fn: fn (&Self,&Self) -> Health) -> Vec<Vec<String>> {
+        let mut result : Vec<Vec<String>> = Vec::new();
+        let mut targets = if let Some(legend) = legend {
+            vec![legend.to_string()]
+        } else {
+            vec!["".to_string()]
+        };
+        targets.extend(Self::all().map(|t|t.to_string()));
+        result.push(targets);
+        for source in Self::all() {
+            let mut targets = vec![source.to_string()];
+            if Self::all().map(|t|stat_fn(&source,&t)).sum::<Health>() != 0 {
+                targets.extend(Self::all().map(|t|stat_fn(&source,&t).to_string()));
+                result.push(targets);
+            }
+        }
+        result
+    }
+    pub fn damage_table(legend: Option<&str>) -> Vec<Vec<String>> {
+        Self::stats_table(legend, Self::damage_amount)
+    }
+    pub fn repair_table(legend: Option<&str>) -> Vec<Vec<String>> {
+        Self::stats_table(legend, Self::repair_amount)
+    }
     pub fn can_move_back(&self) -> bool {
         use UnitType::*;
         match self {
@@ -30,16 +58,6 @@ impl UnitType {
     }
     pub fn initial_health(&self) -> Health {
         9
-    }
-    pub fn units_description() -> String {
-        String::from("\
-            repair 3 (Tech => AI,Firewall,Program)\n\
-            repair 1 (AI => Virus,Tech)\n\
-            damage 9 (Virus => AI)\n\
-            damage 6 (Virus => Tech,Program) (Tech => Virus)\n\
-            damage 3 (AI,Program => any unit except Firewall)\n\
-            damage 1 (Firewall <=> any unit) (Tech => any unit)\n\
-        ")
     }
     pub fn damage_amount(&self, target: &Self) -> Health {
         // update description when changing any value
