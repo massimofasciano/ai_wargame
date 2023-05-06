@@ -1,4 +1,4 @@
-use crate::{UnitType, Player, Unit, DisplayFirstLetter, HeuristicScore};
+use crate::{UnitType, Player, Unit, DisplayFirstLetter};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(transparent)]
@@ -117,18 +117,6 @@ impl BoardCell {
         match &mut self.data {
             None => None,
             Some(data) => Some(data),
-        }
-    }
-    pub fn score(&self, player: Player) -> HeuristicScore {
-        if self.is_empty() {
-            0
-        } else {
-            let score = self.unit().unwrap().score();
-            if self.player().unwrap() == player {
-                score
-            } else {
-                -score
-            }
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::{UnitType, Health, MAX_HEALTH, HeuristicScore};
+use crate::{UnitType, Health, MAX_HEALTH};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Unit {
@@ -49,9 +49,6 @@ impl Unit {
             target.health = 0;
         }
         damage
-    }
-    pub fn score(&self) -> HeuristicScore {
-        self.unit_type.score()
     }
     pub fn can_move_back(&self) -> bool {
         self.unit_type.can_move_back()

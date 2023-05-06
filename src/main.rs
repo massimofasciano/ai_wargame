@@ -1,4 +1,4 @@
-use ai_wargame::{Game, heuristics::{self}, GameOptions};
+use ai_wargame::{Game, GameOptions};
 
 fn main() {
     // #[cfg(feature="rayon")]
@@ -7,27 +7,7 @@ fn main() {
     let cmd_opt = std::env::args().nth(1);
 
     let mut options = GameOptions::default();
-    // options.dim = 7;
-    options.max_depth = Some(6);
-    options.max_moves = Some(150);
-    options.max_seconds = Some(5.0);
-    {
-        use heuristics::*;
-        let _h1 = units_health_weights_bias(10,10,100) * 10
-                                + ai_distance(2,1)
-                                - game_moves();
-        // let _h2 = -game_moves();
-        // options.heuristics.attacker_max = _h1.clone();
-        // options.heuristics.defender_min = _h1;
-        options.heuristics.set_attack_heuristics(_h1);
-        // options.heuristics.set_defense_heuristics(_h2);
-    }
-    // options.move_while_engaged = true;
-    // options.move_while_engaged_full_health = true;
-    options.mutual_damage = true;
-    options.move_only_forward = true;
-    // options.debug = true;
-    options.adjust_max_depth = true;
+    // options.adjust_max_depth = false;
 
     match cmd_opt.as_deref() {
         Some("auto") => {

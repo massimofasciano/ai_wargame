@@ -40,24 +40,15 @@ The game ends when any of these conditions is true:
 
 - a player loses their AI
 - a player cannot perform any action
-- a pre-determined number of moves has been reached (150 is a good number)
+- a pre-determined number of moves has been reached (100 is a good number)
 
 To determine the winner at the end of the game, these rules are applied:
 
 - a player wins if their AI is alive when the other AI is destroyed
-- a score is calculated based on the remaining units (see scoring table). Highest wins.
-- the defender wins if the scores are equal (because attacker starts first)
+- a player loses if no action can be performed
+- the defender wins
 
 ## Tables
-
-### Unit values for scoring
-```
-AI => 50,
-Virus => 25,
-Tech => 25,
-Firewall => 10,
-Program => 10,
-```
 
 ### Damage tables for attacker to defender
 ```
@@ -101,15 +92,14 @@ These are the only allowed repairs.
 
 ### Common strategies
 
-- A Tech unit behind AI, Firewall, Program can make them invincible (except to a Virus for AI and Program).
-- A Virus can move back to it's AI to get slowly repaired
-- A Tech can move around in any direction to help units in need of repair
-- The AI cannot move back so it can be blocked by some units and then destroyed by a Virus
-- Victory by point score happens quite often: placing one's own units in a situation where they can't move can end the game favorably.
+- A Tech unit behind AI, Firewall, Program can make them much stronger.
+- A Virus can move back to it's AI to get slowly repaired.
+- A Tech can move around in any direction to help units in need of repair.
+- The AI cannot move back so it can be blocked by some units and then destroyed by a Virus.
 
 ### Heuristics
 
-- The 2 players have different sets of units so using specialized heuristics for each one will help.
+- The 2 players have different goals and units so using specialized heuristics for each one will help.
 
 ### Example output (AI vs AI with full debug traces, manually shortened)
 

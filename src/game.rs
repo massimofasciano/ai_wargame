@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo, DEFAULT_MAX_MOVES, DEFAULT_MAX_SECONDS};
 
 use anyhow::anyhow;
 use smart_default::SmartDefault;
@@ -77,14 +77,19 @@ pub struct GameOptions {
     pub max_depth: Option<usize>,
     #[default(Some(DEFAULT_MIN_DEPTH))]
     pub min_depth: Option<usize>,
+    #[default(Some(DEFAULT_MAX_MOVES))]
     pub max_moves: Option<usize>,
+    #[default(Some(DEFAULT_MAX_SECONDS))]
     pub max_seconds: Option<f32>,
     pub heuristics: Heuristics,
+    #[default(true)]
     pub mutual_damage: bool,
     pub debug : bool,
+    #[default(true)]
     pub adjust_max_depth : bool,
     pub move_while_engaged : bool,
     pub move_while_engaged_full_health : bool,
+    #[default(true)]
     pub move_only_forward : bool,
 }
 
@@ -296,28 +301,18 @@ impl Game {
             Err(anyhow!("not a valid move"))
         }
     }
-    pub fn player_score(&self, player: Player) -> HeuristicScore {
-        self.units().map(|cell| cell.score(player)).sum()
-    }
-    pub fn best_score_player(&self) -> Player {
-        let player_score = self.player_score(self.player());
-        if player_score > 0 {
-            self.player()
-        } else if player_score < 0 {
-            self.player().next()
-        } else {
-            // if score is equal, the player that started second gets the points
-            Player::default().next()
-        }
-    }
     pub fn end_game_result(&self) -> Option<Player>{
-        if self.state.deadlock || self.options.max_moves.is_some() && self.total_moves() >= self.options.max_moves.unwrap() {
-            return Some(self.best_score_player())
-        } 
         assert_eq!(Player::cardinality(),2);
-        let mut p_all = Player::all();
-        let p1 = p_all.next().unwrap();
-        let p2 = p_all.next().unwrap();
+        if self.state.deadlock {
+            // if deadlocked, we couldn't play a move so other player wins
+            return Some(self.player().next())
+        } 
+        let p1 = Player::default();
+        let p2 = p1.next();
+        let wins_by_default = p2;
+        if self.options.max_moves.is_some() && self.total_moves() >= self.options.max_moves.unwrap() {
+            return Some(wins_by_default)
+        } 
         let mut ai_p1 = false;
         let mut ai_p2 = false;
         for c in self.state.board.iter_units() {
@@ -336,7 +331,7 @@ impl Game {
         } else if ai_p2 && !ai_p1 {
             Some(p2)
         } else if !ai_p2 && !ai_p1 {
-            Some(self.best_score_player())
+            Some(wins_by_default)
         } else {
             None
         }

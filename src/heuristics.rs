@@ -95,7 +95,7 @@ impl<T : HeuristicFn + 'static> Mul<T> for Heuristic {
 
 impl Default for Heuristic {
     fn default() -> Self {
-        units_health_weights_bias(1,1,100) - game_moves()
+        units_health_weights_bias(1,1,100) - game_moves() * 10
     }
 }
 
@@ -105,7 +105,7 @@ impl std::fmt::Debug for Heuristic {
     }
 }
 
-#[derive(Clone,Default,Debug)]
+#[derive(Clone,Debug)]
 pub struct Heuristics {
     pub attacker_max: Heuristic,
     pub attacker_min: Heuristic,
@@ -121,6 +121,23 @@ impl Heuristics {
     pub fn set_defense_heuristics(&mut self, h: Heuristic) {
         self.defender_max = h.clone();
         self.attacker_min = h;
+    }
+}
+
+impl Default for Heuristics {
+    fn default() -> Self {
+        let h_attacker = 
+            units_health_weights_bias(10,10,100) * 10
+            + ai_distance(2,1)
+            - game_moves() * 100;
+        let h_defender = 
+            units_health_weights_bias(10,10,100)
+            + game_moves();
+        Self { 
+            attacker_max: h_attacker.clone(), 
+            attacker_min: h_defender.clone(), 
+            defender_max: h_defender, 
+            defender_min: h_attacker }
     }
 }
 
@@ -164,12 +181,23 @@ pub fn units_health_weights_bias(weight_friend: HeuristicScore, weight_opponent:
     )
 }
 
+pub fn unit_score(unit_type: UnitType) -> HeuristicScore {
+    use UnitType::*;
+    match unit_type {
+        AI => 50,
+        Virus => 25,
+        Tech => 25,
+        Firewall => 10,
+        Program => 10,
+    }
+}
+
 fn units_health_cell(cell: &BoardCell, current_player: &Player, weight_friend: HeuristicScore, weight_opponent: HeuristicScore, health_bias: HeuristicScore) -> HeuristicScore {
     if cell.is_empty() {
         0
     } else {
         let (player, unit) = cell.player_unit().expect("must call with a cell containing a unit");
-        let score = unit.unit_type.score()*(health_bias+unit.health as HeuristicScore);
+        let score = unit_score(unit.unit_type)*(health_bias+unit.health as HeuristicScore);
         if player == current_player {
             weight_friend * score
         } else {
