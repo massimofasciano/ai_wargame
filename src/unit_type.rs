@@ -73,7 +73,6 @@ impl UnitType {
         9
     }
     pub fn damage_amount(&self, target: &Self) -> Health {
-        // update description when changing any value
         use UnitType::*;
         match self {
             AI => match target {
@@ -99,7 +98,6 @@ impl UnitType {
         }
     }
     pub fn repair_amount(&self, target: &Self) -> Health {
-        // update description when changing any value
         use UnitType::*;
         match self {
             Tech => match target {
@@ -112,5 +110,8 @@ impl UnitType {
             },
             _ => 0,
         }
+    }
+    pub fn self_destruct_amount(&self, _target: &Self) -> Health {
+        2
     }
 }

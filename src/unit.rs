@@ -50,6 +50,19 @@ impl Unit {
         }
         damage
     }
+    pub fn apply_self_destruct(&mut self, target: &mut Self) -> Health {
+        assert!(target.health <= MAX_HEALTH);
+        let damage = self.unit_type.self_destruct_amount(&target.unit_type);
+        if damage < target.health {
+            target.health -= damage;
+        } else {
+            target.health = 0;
+        }
+        damage
+    }
+    pub fn kill(&mut self) {
+        self.health = 0; 
+    }
     pub fn can_move_back(&self) -> bool {
         self.unit_type.can_move_back()
     }

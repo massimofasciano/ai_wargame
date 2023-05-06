@@ -58,7 +58,7 @@ impl Coord {
     pub fn is_in_range(&self, to : Coord, range: Dim) -> bool {
         let from = *self;
         range >= 0 &&
-        ((to.row - from.row).abs() + (to.col - from.col).abs()) as Dim == range
+        ((to.row - from.row).abs() + (to.col - from.col).abs()) as Dim <= range
     }
     pub fn iter_neighbors<'a>(&'a self) -> impl Iterator<Item = Coord> + 'a {
         let neighbor_coords = vec![(0,-1),(-1,0),(1,0),(0,1)];

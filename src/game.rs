@@ -383,6 +383,9 @@ impl Game {
             Action::Attack { from, to } => {
                 self.unit_combat(from, to)
             }
+            Action::SelfDestruct { from } => {
+                self.unit_self_destruct(from)
+            }
         }
     }
     pub fn play_turn_from_action(&mut self, action: Action) -> Result<(Player,Action,ActionOutcome),anyhow::Error> {
@@ -447,6 +450,27 @@ impl Game {
             Err(anyhow!("out of range or invalid coordinates"))
         }
     }
+    pub fn unit_self_destruct(&mut self, from: Coord) -> Result<ActionOutcome,anyhow::Error> {
+        if self.is_valid_position(from) && self[from].is_unit() {
+            let mut total_damage = 0;
+            for to in from.rect_around(1).rect_iter() {
+                if from == to || !self.is_valid_position(to) || self[to].is_empty() {
+                    continue;
+                }
+                let [source, target] = self.get_two_cell_data_mut(from, to).unwrap();
+                let (_,unit_source) = source.player_unit_mut().unwrap();
+                let (_,unit_target) = target.player_unit_mut().unwrap();
+                total_damage += unit_source.apply_self_destruct(unit_target);
+                self.remove_dead(to);
+            }
+            let (_, source) = self.get_cell_data_mut(from).expect("not empty").player_unit_mut().expect("not empty");
+            source.kill();
+            self.remove_dead(from);
+            Ok(ActionOutcome::SelfDestructed{total_damage})
+        } else {
+            Err(anyhow!("invalid coordinates"))
+        }
+    }
     pub fn action_from_coords(&self, from: impl Into<Coord>, to: impl Into<Coord>) -> Result<Action,anyhow::Error> {
         let (from, to) = (from.into(),to.into());
         if self.are_in_range(from, to, 1) && 
@@ -455,10 +479,8 @@ impl Game {
         {
             // it's our turn and we are acting on our own unit
             if from == to {
-                // destination is same as source => we wish to skip this move
-                // Ok(Action::Pass)
-                // destination is same as source => skip/pass disabled
-                Err(anyhow!("can't pass"))
+                // destination is same as source => self destruction!
+                Ok(Action::SelfDestruct { from })
             } else if self.is_valid_move(from, to) {
                 // destination empty and move validated (not engaged, etc...)
                 Ok(Action::Move { from, to })
