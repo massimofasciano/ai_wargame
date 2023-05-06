@@ -85,7 +85,6 @@ pub struct GameOptions {
     #[default(true)]
     pub mutual_damage: bool,
     pub debug : bool,
-    #[default(true)]
     pub adjust_max_depth : bool,
     pub move_while_engaged : bool,
     pub move_while_engaged_full_health : bool,
@@ -677,7 +676,7 @@ impl Game {
         (score,suggestion,elapsed_seconds,avg_depth)
     }
     pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
-        let branching_factor = 12; // we could update this live
+        let branching_factor = 7; // we could update this live
         let mut options = self.clone_options();
         if options.max_depth.is_some() && avg_depth < options.max_depth.unwrap() as f32 * 0.9 {
             options.max_depth = Some(options.max_depth.unwrap()-1);

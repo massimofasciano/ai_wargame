@@ -7,7 +7,6 @@ fn main() {
     let cmd_opt = std::env::args().nth(1);
 
     let mut options = GameOptions::default();
-    // options.adjust_max_depth = false;
 
     match cmd_opt.as_deref() {
         Some("auto") => {
