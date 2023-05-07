@@ -1,6 +1,7 @@
 use std::fmt::Write as FmtWrite;
 use std::fmt::Result as FmtResult;
 
+use crate::UnitType;
 use crate::{Coord, Game};
 
 impl Game {
@@ -68,5 +69,29 @@ impl Game {
         }
         write!(w,"</tbody>")?;
         write!(w,"</table>")
+    }
+    fn html_th(s : &String) -> String {
+        format!("<th>{s}</th>")
+    }
+    fn html_td(s : &String) -> String {
+        format!("<td>{s}</td>")
+    }
+    pub fn html_damage_table(&self, w : &mut impl FmtWrite, legend: Option<&str>) -> FmtResult {
+        Self::html_table(w, UnitType::damage_table(legend,Self::html_th,Self::html_td))
+    }
+    pub fn html_repair_table(&self, w : &mut impl FmtWrite, legend: Option<&str>) -> FmtResult {
+        Self::html_table(w, UnitType::repair_table(legend,Self::html_th,Self::html_td))
+    }
+    pub fn html_table(w : &mut impl FmtWrite, table: Vec<Vec<String>>) -> FmtResult {
+        writeln!(w,"<table class=\"stats-table\">")?;
+        for row in table {
+            writeln!(w,"<tr>")?;
+            for cell in row {
+                write!(w,"{cell}")?;
+            }
+            writeln!(w,"</tr>")?;
+        }
+        writeln!(w,"</table>")?;
+        Ok(())
     }
 }
