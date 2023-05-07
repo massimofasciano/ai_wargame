@@ -76,14 +76,23 @@ impl Game {
     fn html_td(s : &String) -> String {
         format!("<td>{s}</td>")
     }
-    pub fn html_damage_table(&self, w : &mut impl FmtWrite, legend: Option<&str>) -> FmtResult {
-        Self::html_table(w, UnitType::damage_table(legend,Self::html_th,Self::html_td))
+    pub fn html_damage_table_string(&self, legend: Option<&str>) -> String {
+        let mut html = String::new();
+        Self::html_table_writer(&mut html,
+            UnitType::damage_table(legend,Self::html_th,Self::html_td))
+            .expect("write to string can't fail");
+        html
     }
-    pub fn html_repair_table(&self, w : &mut impl FmtWrite, legend: Option<&str>) -> FmtResult {
-        Self::html_table(w, UnitType::repair_table(legend,Self::html_th,Self::html_td))
+    pub fn html_repair_table_string(&self, legend: Option<&str>) -> String {
+        let mut html = String::new();
+        Self::html_table_writer(&mut html,
+            UnitType::repair_table(legend,Self::html_th,Self::html_td))
+            .expect("write to string can't fail");
+        html
     }
-    pub fn html_table(w : &mut impl FmtWrite, table: Vec<Vec<String>>) -> FmtResult {
-        writeln!(w,"<table class=\"stats-table\">")?;
+    pub fn html_table_writer(w : &mut impl FmtWrite, table: Vec<Vec<String>>) -> FmtResult {
+        let cls = "stats-table";
+        writeln!(w,"<table class=\"{cls}\">")?;
         for row in table {
             writeln!(w,"<tr>")?;
             for cell in row {

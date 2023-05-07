@@ -26,14 +26,14 @@ impl UnitType {
         ) -> Vec<Vec<String>> {
         let mut result : Vec<Vec<String>> = Vec::new();
         let mut targets = if let Some(legend) = legend {
-            vec![legend.to_string()]
+            vec![format_header(&legend.to_string())]
         } else {
-            vec!["".to_string()]
+            vec![format_header(&"".to_string())]
         };
         targets.extend(Self::all().map(|t|format_header(&t.to_string())));
         result.push(targets);
         for source in Self::all() {
-            let mut targets = vec![source.to_string()];
+            let mut targets = vec![format_header(&source.to_string())];
             if Self::all().map(|t|stat_fn(&source,&t)).sum::<Health>() != 0 {
                 targets.extend(Self::all().map(|t|format_data(&stat_fn(&source,&t).to_string())));
                 result.push(targets);
