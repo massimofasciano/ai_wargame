@@ -19,7 +19,8 @@ fn main() {
             std::process::exit(1);
         }
     }
-        
+
+    // options.debug = false;
     let mut game = Game::new(options);
 
     loop {

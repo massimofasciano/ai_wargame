@@ -114,4 +114,8 @@ impl UnitType {
     pub fn self_destruct_amount(&self, _target: &Self) -> Health {
         2
     }
+    pub fn self_destruct_string() -> String {
+        // same for every unit (TODO: we should check this)
+        UnitType::AI.self_destruct_amount(&UnitType::AI).to_string()
+    }
 }

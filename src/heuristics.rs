@@ -131,8 +131,7 @@ impl Default for Heuristics {
             + ai_distance(2,1)
             - game_moves() * 100;
         let h_defender = 
-            units_health_weights_bias(10,10,100)
-            + game_moves();
+            units_health_weights_bias(10,10,10);
         Self { 
             attacker_max: h_attacker.clone(), 
             attacker_min: h_defender.clone(), 

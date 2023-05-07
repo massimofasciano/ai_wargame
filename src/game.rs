@@ -527,8 +527,12 @@ impl Game {
             self.state.board.iter_unit_coords().filter_map(move|to| 
                 if from==to {None} else {Some(CoordPair::new(from,to))}))
     }
-    pub fn heuristic(&self, player: Player, maximizing_player: bool, _depth: usize) -> HeuristicScore {
-        let result = self.end_game_result();
+    pub fn heuristic(&self, player: Player, maximizing_player: bool, _depth: usize, opt_end_game_result: Option<Option<Player>>) -> HeuristicScore {
+        let result = if let Some(end_game_result) = opt_end_game_result {
+            end_game_result
+        } else {
+            self.end_game_result()
+        };
         let moves = self.total_moves() as HeuristicScore;
         let score = match result {
             Some(winner) => {
@@ -571,10 +575,16 @@ impl Game {
                 timeout = true;
             }
         }
+        let mut opt_end_game_result : Option<Option<Player>> = None;
         if timeout && self.options.min_depth.is_some() && depth >= self.options.min_depth.unwrap()
             || self.options.max_depth.is_some() && depth >= self.options.max_depth.unwrap()
-            || self.end_game_result().is_some() {
-            (self.heuristic(player,maximizing_player,depth),None,depth as f32)
+            || { 
+                let end_game_result = self.end_game_result();
+                opt_end_game_result=Some(end_game_result); 
+                end_game_result.is_some()
+            } 
+        {
+            (self.heuristic(player,maximizing_player,depth,opt_end_game_result),None,depth as f32)
         } else {
             let mut best_action = None;
             let mut best_score;
@@ -615,7 +625,7 @@ impl Game {
                 }
             }
             if total_count == 0 {
-                (self.heuristic(player,maximizing_player,depth),None,depth as f32)
+                (self.heuristic(player,maximizing_player,depth,opt_end_game_result),None,depth as f32)
             } else {
                 #[cfg(feature="stats")]
                 {   // branching stats
@@ -746,12 +756,10 @@ impl Game {
         if let Ok((player, action, outcome)) = self.play_turn_from_coords(from, to) {
             if let Some(w) = opt_w {
                 writeln!(w,"{}: {}", player, action)?;
-                if self.options.debug {
-                    if outcome.is_useful_info() {
-                        writeln!(w,"{}", outcome)?;
-                    }
+                if outcome.is_useful_info() {
+                    writeln!(w,"{}", outcome)?;
                 }
-            }
+        }
             Ok(true)
         } else {
             Ok(false)
@@ -770,10 +778,10 @@ impl Game {
             if let Ok((player, action, outcome)) = self.play_turn_from_action(best_action) {
                 if let Some(w) = opt_w {
                     writeln!(w,"{}: {}", player, action)?;
+                    if outcome.is_useful_info() {
+                        writeln!(w,"{}", outcome)?;
+                    }
                     if self.options.debug {
-                        if outcome.is_useful_info() {
-                            writeln!(w,"{}", outcome)?;
-                        }
                         writeln!(w,"Compute time: {:.1} sec", elapsed_seconds)?;
                         writeln!(w,"Average depth: {:.1}", avg_depth)?;
                         writeln!(w,"Heuristic score: {}", score)?;

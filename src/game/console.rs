@@ -43,6 +43,8 @@ impl Game {
                     },
                     _ => {
                         println!();
+                        println!("Enter source coordinates followed by target for action (move, attack, repair).");
+                        println!("If source=target it means self-destruct."); 
                         println!("example input: a6 d9"); 
                         println!();
                         println!("Damage table:");
@@ -55,6 +57,8 @@ impl Game {
                         println!("Repair table:");
                         Self::console_table(width, 
                             UnitType::repair_table(legend,tfmt,tfmt));
+                        println!();
+                        println!("Self destruct damage: {} per adjacent unit (including diagonals and firendlies)",UnitType::self_destruct_string());
                         println!();
                     }
                 }
