@@ -23,6 +23,13 @@ fn main() {
     // options.debug = false;
     let mut game = Game::new(options);
 
+    if let Some(max_seconds) = game.options().max_seconds {
+        println!("Running benchmark (expect delay of up to {:.0} seconds)...", max_seconds*1.4);
+        if let Some(max_depth) = game.run_benchmark(None) {
+            println!("Benchmark adjusted max depth to {max_depth}");
+        }
+    }
+
     loop {
         println!();
         game.console_pretty_print();

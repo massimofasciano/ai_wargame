@@ -85,6 +85,7 @@ pub struct GameOptions {
     #[default(true)]
     pub mutual_damage: bool,
     pub debug : bool,
+    #[default(true)]
     pub adjust_max_depth : bool,
     pub move_while_engaged : bool,
     pub move_while_engaged_full_health : bool,
@@ -685,12 +686,47 @@ impl Game {
         let elapsed_seconds = Instant::now().duration_since(start_time).as_secs_f32();
         (score,suggestion,elapsed_seconds,avg_depth)
     }
-    pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
-        let branching_factor = 7; // we could update this live
+    pub fn run_benchmark(&mut self, opt_max_seconds: Option<f32>) -> Option<usize> {
+        let avg_branching_factor = 6.5; // adjust this manually based on historical data
+        let mut max_depth = DEFAULT_MIN_DEPTH;
+        let max_seconds = if let Some(max_seconds) = opt_max_seconds {
+            max_seconds
+        } else if let Some (max_seconds) = self.options().max_seconds {
+            max_seconds*1.2
+        } else {
+            return None;
+        };
+        loop {
+            max_depth += 1;
+            let mut options = self.clone_options();
+            options.max_seconds = Some(max_seconds);
+            options.max_depth = Some(max_depth);
+            let mut test_game = self.clone();
+            test_game.set_options(options);
+            let (_,_,elapsed_seconds,_avg_depth) = test_game.suggest_action();
+            if elapsed_seconds > max_seconds*0.95 {
+                max_depth -= 1;
+                break;
+            }
+            if elapsed_seconds > max_seconds/avg_branching_factor {
+                break;
+            }
+        }
         let mut options = self.clone_options();
-        if options.max_depth.is_some() && avg_depth < options.max_depth.unwrap() as f32 * 0.9 {
+        options.max_depth = Some(max_depth);
+        self.set_options(options);
+        Some(max_depth)
+    }
+    pub fn adjust_max_depth(&mut self, elapsed_seconds: f32, avg_depth: f32) {
+        let avg_branching_factor = 6.5; // adjust this manually based on historical data
+        let mut options = self.clone_options();
+        if options.max_depth.is_some() && avg_depth < options.max_depth.unwrap() as f32 * 0.8 &&
+            options.max_seconds.is_some() && elapsed_seconds > self.options.max_seconds.unwrap()*0.95 
+        {
             options.max_depth = Some(options.max_depth.unwrap()-1);
-        } else if options.max_depth.is_some() && options.max_seconds.is_some() && elapsed_seconds < self.options.max_seconds.unwrap() / (branching_factor as f32 * 1.2) {
+        } else if options.max_depth.is_some() && options.max_seconds.is_some() && 
+            elapsed_seconds < self.options.max_seconds.unwrap() / (avg_branching_factor * 1.2)
+        {
             options.max_depth = Some(options.max_depth.unwrap()+1);
         }
         self.set_options(options);
