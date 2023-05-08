@@ -126,18 +126,31 @@ impl Heuristics {
 
 impl Default for Heuristics {
     fn default() -> Self {
-        let h_attacker = 
-            units_health_weights_bias(10,10,100) * 10
-            + ai_distance(2,1)
-            - game_moves() * 100;
-        let h_defender = 
-            units_health_weights_bias(10,10,10);
         Self { 
-            attacker_max: h_attacker.clone(), 
-            attacker_min: h_defender.clone(), 
-            defender_max: h_defender, 
-            defender_min: h_attacker }
+            attacker_max: default_attacker_heuristic(),
+            attacker_min: default_defender_heuristic(),
+            defender_max: default_defender_heuristic(), 
+            defender_min: default_attacker_heuristic(),
+        }
     }
+}
+
+pub fn uninformed_heuristic() -> Heuristic {
+    constant_value(0)
+}
+
+pub fn naive_heuristic() -> Heuristic {
+    units_count(1, 1)
+}
+
+pub fn default_attacker_heuristic() -> Heuristic {
+    units_health_weights_bias(10,10,100) * 10
+        + ai_distance(2,1)
+        - game_moves() * 100
+}
+
+pub fn default_defender_heuristic() -> Heuristic {
+    units_health_weights_bias(10,10,10)
 }
 
 pub fn ai_distance(weight_friend: HeuristicScore, weight_opponent: HeuristicScore) -> Heuristic {
@@ -171,7 +184,9 @@ pub fn game_moves() -> Heuristic {
     Heuristic::new(|game: &Game,_| game.total_moves() as HeuristicScore)
 }
 
-pub fn units_health_weights_bias(weight_friend: HeuristicScore, weight_opponent: HeuristicScore, health_bias: HeuristicScore) -> Heuristic {
+pub fn units_health_weights_bias(weight_friend: HeuristicScore, 
+    weight_opponent: HeuristicScore, health_bias: HeuristicScore) -> Heuristic 
+{
     Heuristic::new(
         move|game:&Game,player:Player| 
             game.units().map(|cell|
@@ -191,7 +206,10 @@ pub fn unit_score(unit_type: UnitType) -> HeuristicScore {
     }
 }
 
-fn units_health_cell(cell: &BoardCell, current_player: &Player, weight_friend: HeuristicScore, weight_opponent: HeuristicScore, health_bias: HeuristicScore) -> HeuristicScore {
+fn units_health_cell(cell: &BoardCell, current_player: &Player, 
+    weight_friend: HeuristicScore, weight_opponent: HeuristicScore, 
+    health_bias: HeuristicScore) -> HeuristicScore 
+{
     if cell.is_empty() {
         0
     } else {
@@ -205,3 +223,27 @@ fn units_health_cell(cell: &BoardCell, current_player: &Player, weight_friend: H
     }
 }
 
+pub fn units_count(weight_friend: HeuristicScore, weight_opponent: HeuristicScore) -> Heuristic 
+{
+    Heuristic::new(
+        move|game:&Game,player:Player| 
+            game.units().map(|cell|
+                units_count_cell(cell,&player,weight_friend,weight_opponent))
+            .sum()
+    )
+}
+
+fn units_count_cell(cell: &BoardCell, current_player: &Player, 
+    weight_friend: HeuristicScore, weight_opponent: HeuristicScore) -> HeuristicScore 
+{
+    if cell.is_empty() {
+        0
+    } else {
+        let player = cell.player().expect("must call with a cell containing a unit");
+        if &player == current_player {
+            weight_friend
+        } else {
+            -weight_opponent
+        }
+    }
+}
