@@ -233,17 +233,29 @@ pub fn units_count(weight_friend: HeuristicScore, weight_opponent: HeuristicScor
     )
 }
 
+pub fn unit_score_naive(unit_type: UnitType) -> HeuristicScore {
+    use UnitType::*;
+    match unit_type {
+        AI => 3,
+        Virus => 2,
+        Tech => 2,
+        Firewall => 1,
+        Program => 1,
+    }
+}
+
 fn units_count_cell(cell: &BoardCell, current_player: &Player, 
     weight_friend: HeuristicScore, weight_opponent: HeuristicScore) -> HeuristicScore 
 {
     if cell.is_empty() {
         0
     } else {
-        let player = cell.player().expect("must call with a cell containing a unit");
-        if &player == current_player {
-            weight_friend
+        let (player, unit) = cell.player_unit().expect("must call with a cell containing a unit");
+        let score = unit_score_naive(unit.unit_type);
+        if player == current_player {
+            weight_friend * score
         } else {
-            -weight_opponent
+            weight_opponent * -score
         }
     }
 }
