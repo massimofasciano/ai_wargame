@@ -94,6 +94,8 @@ pub struct GameOptions {
     #[default(true)]
     pub move_only_forward : bool,
     pub multi_threaded : bool,
+    #[default(true)]
+    pub rand_traversal : bool,
 }
 
 impl Default for Game {
@@ -605,14 +607,11 @@ impl Game {
             let mut best_score;
             let mut total_depth = 0.0;
             let mut total_count = 0;
-            let possible_actions = self.player_unit_coords(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
-            cfg_if::cfg_if! {
-                if #[cfg(feature = "rand-actions")] {
-                    let mut possible_actions = possible_actions.collect::<Vec<_>>();
-                    let mut rng = rand::thread_rng();
-                    possible_actions.shuffle(&mut rng);
-                } else {
-                }
+            let mut possible_actions = self.player_unit_coords(self.player())
+                .flat_map(|coord|self.possible_actions_from_coord(coord))
+                .collect::<Vec<_>>();
+            if self.options.rand_traversal {
+                possible_actions.shuffle(&mut rand::thread_rng());
             }
             if maximizing_player {
                 best_score = heuristics::MIN_HEURISTIC_SCORE;
@@ -663,22 +662,19 @@ impl Game {
         let mut best_score = heuristics::MIN_HEURISTIC_SCORE;
         let mut total_depth = 0.0;
         let mut total_count = 0;
-        let possible_actions = self.player_unit_coords(self.player()).flat_map(|coord|self.possible_actions_from_coord(coord));
-        cfg_if::cfg_if! {
-            if #[cfg(feature = "rand-actions")] {
-                let mut possible_actions = possible_actions.collect::<Vec<_>>();
-                let mut rng = rand::thread_rng();
-                possible_actions.shuffle(&mut rng);
-            } else {
-                let possible_actions = possible_actions.collect::<Vec<_>>();
-            }
+        let mut possible_actions = self.player_unit_coords(self.player())
+            .flat_map(|coord|self.possible_actions_from_coord(coord))
+            .collect::<Vec<_>>();
+        if self.options.rand_traversal {
+            possible_actions.shuffle(&mut rand::thread_rng());
         }
-        let possible_games = possible_actions.par_iter().map(|&possible_action|{
-            let mut possible_game = self.clone();
-            possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-            let suggest = possible_game.suggest_action_rec(!maximizing_player, player, depth+1, alpha, beta, start_time);
-            (suggest,possible_action)
-        }).collect::<Vec<_>>();
+        let possible_games = possible_actions.par_iter()
+            .map(|&possible_action|{
+                let mut possible_game = self.clone();
+                possible_game.play_turn_from_action(possible_action).expect("action should be valid");
+                let suggest = possible_game.suggest_action_rec(!maximizing_player, player, depth+1, alpha, beta, start_time);
+                (suggest,possible_action)
+            }).collect::<Vec<_>>();
         for ((score, _, rec_avg_depth),possible_action) in possible_games {
             total_depth += rec_avg_depth;
             total_count += 1;

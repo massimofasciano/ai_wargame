@@ -21,19 +21,21 @@ fn main() {
     let program = args[0].clone();
 
     let mut opts = getopts::Options::new();
-    opts.optopt("d", "depth", "maximum search depth", "NUM");
-    opts.optopt("s", "seconds", "maximum search time in seconds", "NUM");
-    opts.optopt("m", "moves", "maximum moves in a game", "NUM");
-    opts.optopt("p", "play", "type of gameplay", "auto|defender|attacker");
-    #[cfg(feature = "rayon")]
-    opts.optopt("t", "threads", "mumber of computing threads to use (defaults to total cores)", "NUM");
+    opts.optopt("p", "play", "type of gameplay", "auto|defend(er)|attack(er)");
+    opts.optopt("d", "depth", "maximum search depth", "INT");
+    opts.optopt("s", "seconds", "maximum search time in seconds", "FLOAT");
+    opts.optopt("m", "moves", "maximum moves in a game", "INT");
 
-    opts.optflag("h", "help", "print this help menu");
-    opts.optflag("a", "auto-depth", "try to auto adjust the search depth dynamically");
-    #[cfg(feature="rayon")]
-    opts.optflag("r", "rayon", "enable rayon multithreading");
-    opts.optflag("n", "no-debug", "disable debug information");
+    opts.optflag("R", "no-rand-traversal", "disable random traversal of possible actions");
+    opts.optflag("A", "no-auto-depth", "don't try to auto adjust the search depth dynamically");
     opts.optflag("b", "benchmark", "determine starting max-depth via benchmark");
+    opts.optflag("D", "no-debug", "disable debug information");
+
+    #[cfg(feature="rayon")]
+    opts.optflag("t", "multi-threaded", "enable multithreading (experimental: usually slower)");
+    #[cfg(feature = "rayon")]
+    opts.optopt("T", "threads", "mumber of computing threads to use (defaults to total cores)", "INT");
+    opts.optflag("h", "help", "print this help menu");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
@@ -70,7 +72,8 @@ fn main() {
     };
 
     options.debug = !matches.opt_present("no-debug");
-    options.adjust_max_depth = matches.opt_present("auto-depth");
+    options.rand_traversal = !matches.opt_present("no-rand-traversal");
+    options.adjust_max_depth = !matches.opt_present("no-auto-depth");
     if matches.opt_present("depth") {
         options.max_depth = matches.opt_str("depth").and_then(|s|s.parse::<usize>().ok());
     }
@@ -83,7 +86,7 @@ fn main() {
 
     options.multi_threaded = false;
     #[cfg(feature="rayon")]
-    if matches.opt_present("rayon") {
+    if matches.opt_present("multi-threaded") {
         options.multi_threaded = true;
         if let Some(threads) = matches.opt_str("threads").and_then(|s|s.parse::<usize>().ok()) {
             rayon::ThreadPoolBuilder::new().num_threads(threads).build_global().unwrap();
