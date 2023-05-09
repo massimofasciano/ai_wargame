@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo, DEFAULT_MAX_MOVES, DEFAULT_MAX_SECONDS, number_digits_precision_to_string};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo, DEFAULT_MAX_MOVES, DEFAULT_MAX_SECONDS, number_digits_precision_to_string, rescale_number_to_string};
 
 use anyhow::anyhow;
 use smart_default::SmartDefault;
@@ -68,6 +68,7 @@ pub struct GameStats {
     total_seconds : f32,
     total_effective_branches : usize,
     total_moves_per_effective_branch : usize,
+    total_nodes: usize,
 }
 
 #[derive(Debug, Clone, SmartDefault)]
@@ -147,6 +148,13 @@ impl Game {
     }
     pub fn stats(&self) -> Arc<Mutex<GameStats>> {
         self.stats.clone()
+    }
+    pub fn set_new_stats(&mut self) {
+        self.stats = Default::default();
+    }
+    pub fn reset_stats(&mut self) {
+        let mut stats = self.stats.lock().expect("lock should work");
+        *stats = Default::default();
     }
     pub fn options(&self) -> Arc<GameOptions> {
         self.options.clone()
@@ -570,6 +578,10 @@ impl Game {
         score
     }
     pub fn suggest_action_rec(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
+        #[cfg(feature="stats")]
+        {
+            self.stats.lock().expect("should get a lock").total_nodes += 1;
+        }
         let mut timeout = false;
         if let Some(max_seconds) = self.options.max_seconds {
             let elapsed_seconds = Instant::now().duration_since(start_time).as_secs_f32();
@@ -642,6 +654,10 @@ impl Game {
     #[cfg(feature="rayon")]
     pub fn suggest_action_rec_par(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
         assert_eq!(maximizing_player,true,"call only at top level");
+        #[cfg(feature="stats")]
+        {
+            self.stats.lock().expect("should get a lock").total_nodes += 1;
+        }
         let mut best_action = None;
         let mut best_score = heuristics::MIN_HEURISTIC_SCORE;
         let mut total_depth = 0.0;
@@ -704,6 +720,7 @@ impl Game {
             options.max_depth = Some(max_depth);
             let mut test_game = self.clone();
             test_game.set_options(options);
+            test_game.set_new_stats();
             let (_,_,elapsed_seconds,_avg_depth) = test_game.suggest_action();
             if elapsed_seconds > max_seconds*0.95 {
                 max_depth -= 1;
@@ -753,8 +770,8 @@ impl Game {
             {
                 let stats = self.stats.lock().expect("should get a lock");
                 let (dc, counts_total) = stats.depth_counts.iter().fold((0,0),|(dc,ct),(d,c)| (dc+d*c,ct+c));
-                writeln!(w,"Evals by depth: {}",
-                    stats.depth_counts.iter()
+                if counts_total > 0 {
+                    writeln!(w,"Evals by depth: {}", stats.depth_counts.iter()
                         .sorted_by_key(|x| x.0)
                         .filter_map(|(k,v)|{
                             let pct = *v as f64 * 100.0 / counts_total as f64;
@@ -764,7 +781,6 @@ impl Game {
                                 Some(format!("{k}={}%", number_digits_precision_to_string(pct,1)))
                             }
                         }).join(" "))?;
-                if counts_total > 0 {
                     writeln!(w,"Average eval depth: {:.1}",dc as f32/counts_total as f32)?;
                 }
                 if self.total_moves() > 0 {
@@ -773,8 +789,15 @@ impl Game {
                 if stats.total_effective_branches > 0 {
                     writeln!(w,"Average branching factor: {:.1}",stats.total_moves_per_effective_branch as f32/stats.total_effective_branches as f32)?; 
                 }
-                if counts_total > 0 && stats.total_seconds > 0.0 {
-                    writeln!(w,"Perf. (kE/s): {:.0}",counts_total as f32/stats.total_seconds/1000.0)?; 
+                if (counts_total > 0 || stats.total_nodes > 0) && stats.total_seconds > 0.0 {
+                    write!(w,"Perf. ")?;
+                    if counts_total > 0 && stats.total_seconds > 0.0 {
+                        write!(w,"Evals: {}/s  ",rescale_number_to_string(counts_total as f32/stats.total_seconds))?; 
+                    }
+                    if stats.total_nodes > 0 && stats.total_seconds > 0.0 {
+                        write!(w,"Nodes: {}/s",rescale_number_to_string(stats.total_nodes as f32/stats.total_seconds))?; 
+                    }
+                    writeln!(w)?;
                 }
             }            
             writeln!(w,"Next player: {}",self.player())?;
