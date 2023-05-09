@@ -1,6 +1,6 @@
 [package]
 name = "ai_wargame"
-version = "0.15.9"
+version = "0.15.10"
 edition = "2021"
 
 [dependencies]
@@ -10,6 +10,8 @@ derive_more = "0.99.17"
 duplicate = "1.0.0"
 enum-iterator = "1.4.0"
 instant = "0.1.12"
+itertools = "0.10.5"
+number_prefix = "0.4.0"
 rand = "0.8.5"
 rayon = { version = "1.7.0", optional = true }
 regex = "1.7.4"
@@ -29,6 +31,7 @@ strip = true
 [features]
 #default = ["rand-actions", "board_map", "stats"]
 default = ["rand-actions", "board_vec", "stats"]
+#default = ["rand-actions", "board_array", "stats"]
 rand-actions = []
 board_vec = []
 board_array = []

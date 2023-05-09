@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo, DEFAULT_MAX_MOVES, DEFAULT_MAX_SECONDS};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo, DEFAULT_MAX_MOVES, DEFAULT_MAX_SECONDS, number_digits_precision_to_string};
 
 use anyhow::anyhow;
 use smart_default::SmartDefault;
@@ -7,6 +7,7 @@ use std::sync::Arc;
 use instant::Instant;
 use std::io::Write as IoWrite;
 use std::io::Result as IoResult;
+use itertools::Itertools;
 
 #[cfg(feature="stats")]
 use std::{sync::Mutex, collections::HashMap};
@@ -751,10 +752,15 @@ impl Game {
             #[cfg(feature="stats")]
             {
                 let stats = self.stats.lock().expect("should get a lock");
-                writeln!(w,"Total evals at each depth: {:?}",stats.depth_counts)?;
-                let (dc, ct) = stats.depth_counts.iter().fold((0,0),|(dc,ct),(d,c)| (dc+d*c,ct+c));
-                if ct > 0 {
-                    writeln!(w,"Average eval depth: {:.1}",dc as f32/ct as f32)?;
+                let (dc, counts_total) = stats.depth_counts.iter().fold((0,0),|(dc,ct),(d,c)| (dc+d*c,ct+c));
+                writeln!(w,"Cumul. evals by depth: {}",
+                    stats.depth_counts.iter()
+                        .sorted_by_key(|x| x.0)
+                        .map(|(k,v)|format!("{k}={}%",
+                            number_digits_precision_to_string(*v as f64 * 100.0 / counts_total as f64,1)))
+                        .join(" "))?;
+                if counts_total > 0 {
+                    writeln!(w,"Average eval depth: {:.1}",dc as f32/counts_total as f32)?;
                 }
                 if self.total_moves() > 0 {
                     writeln!(w,"Average eval time: {:.1}",stats.total_seconds as f32/self.total_moves() as f32)?; 
@@ -762,8 +768,8 @@ impl Game {
                 if stats.total_effective_branches > 0 {
                     writeln!(w,"Average branching factor: {:.1}",stats.total_moves_per_effective_branch as f32/stats.total_effective_branches as f32)?; 
                 }
-                if ct > 0 && stats.total_seconds > 0.0 {
-                    writeln!(w,"Perf. (kE/s): {:.0}",ct as f32/stats.total_seconds/1000.0)?; 
+                if counts_total > 0 && stats.total_seconds > 0.0 {
+                    writeln!(w,"Perf. (kE/s): {:.0}",counts_total as f32/stats.total_seconds/1000.0)?; 
                 }
             }            
             writeln!(w,"Next player: {}",self.player())?;

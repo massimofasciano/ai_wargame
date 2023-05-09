@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "ai_wargame"
-version = "0.15.9"
+version = "0.15.10"
 dependencies = [
  "anyhow",
  "cfg-if",
@@ -21,6 +21,8 @@ dependencies = [
  "duplicate",
  "enum-iterator",
  "instant",
+ "itertools",
+ "number_prefix",
  "rand",
  "rayon",
  "regex",
@@ -179,6 +181,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.141"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -208,6 +219,12 @@ dependencies = [
  "hermit-abi",
  "libc",
 ]
+
+[[package]]
+name = "number_prefix"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "830b246a0e5f20af87141b25c173cd1b609bd7779a4617d6ec582abaf90870f3"
 
 [[package]]
 name = "ppv-lite86"
