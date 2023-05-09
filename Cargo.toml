@@ -1,6 +1,6 @@
 [package]
 name = "ai_wargame"
-version = "0.15.12"
+version = "0.16.0"
 edition = "2021"
 
 [dependencies]
@@ -9,6 +9,7 @@ cfg-if = "1.0.0"
 derive_more = "0.99.17"
 duplicate = "1.0.0"
 enum-iterator = "1.4.0"
+getopts = "0.2.21"
 instant = "0.1.12"
 itertools = "0.10.5"
 number_prefix = "0.4.0"

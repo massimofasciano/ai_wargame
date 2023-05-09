@@ -93,6 +93,7 @@ pub struct GameOptions {
     pub move_while_engaged_full_health : bool,
     #[default(true)]
     pub move_only_forward : bool,
+    pub multi_threaded : bool,
 }
 
 impl Default for Game {
@@ -698,8 +699,11 @@ impl Game {
         let (score, suggestion, avg_depth) = 
             self.suggest_action_rec(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         #[cfg(feature="rayon")]
-        let (score, suggestion, avg_depth) = 
-            self.suggest_action_rec_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
+        let (score, suggestion, avg_depth) = if self.options().multi_threaded {
+            self.suggest_action_rec_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
+        } else {
+            self.suggest_action_rec(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
+        };
         let elapsed_seconds = Instant::now().duration_since(start_time).as_secs_f32();
         (score,suggestion,elapsed_seconds,avg_depth)
     }
