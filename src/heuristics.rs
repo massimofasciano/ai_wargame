@@ -1,6 +1,7 @@
-use std::{ops::{Deref, Add, Mul, Sub, Neg}, sync::Arc};
-
 use crate::{Game, BoardCell, Player, UnitType};
+
+use std::{ops::{Deref, Add, Mul, Sub, Neg}, sync::Arc};
+use rand::Rng;
 
 pub type HeuristicScore = i32;
 
@@ -180,6 +181,10 @@ pub fn ai_distance(weight_friend: HeuristicScore, weight_opponent: HeuristicScor
 
 pub fn constant_value(value: HeuristicScore) -> Heuristic {
     Heuristic::new(move|_,_| value)
+}
+
+pub fn random_value(min: HeuristicScore, max: HeuristicScore) -> Heuristic {
+    Heuristic::new(move|_,_| rand::thread_rng().gen_range(min..=max))
 }
 
 pub fn game_moves() -> Heuristic {
