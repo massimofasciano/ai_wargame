@@ -753,12 +753,17 @@ impl Game {
             {
                 let stats = self.stats.lock().expect("should get a lock");
                 let (dc, counts_total) = stats.depth_counts.iter().fold((0,0),|(dc,ct),(d,c)| (dc+d*c,ct+c));
-                writeln!(w,"Cumul. evals by depth: {}",
+                writeln!(w,"Evals by depth: {}",
                     stats.depth_counts.iter()
                         .sorted_by_key(|x| x.0)
-                        .map(|(k,v)|format!("{k}={}%",
-                            number_digits_precision_to_string(*v as f64 * 100.0 / counts_total as f64,1)))
-                        .join(" "))?;
+                        .filter_map(|(k,v)|{
+                            let pct = *v as f64 * 100.0 / counts_total as f64;
+                            if pct < 0.1 {
+                                None
+                            } else {
+                                Some(format!("{k}={}%", number_digits_precision_to_string(pct,1)))
+                            }
+                        }).join(" "))?;
                 if counts_total > 0 {
                     writeln!(w,"Average eval depth: {:.1}",dc as f32/counts_total as f32)?;
                 }
