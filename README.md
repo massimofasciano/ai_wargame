@@ -109,241 +109,207 @@ In a simple mouse-driven interface, you click on the starting cell and then the 
 
 ### Short trace with full debug (end of an AI vs AI game)
 
-Attacker starts seeing victory in heuristic score at move 50 of 57 (search depth = 7).
+Defender starts seeing possible victory in heuristic score at move 53 of 60 (search depth = 7).
 
 ```
-47/100 moves played
-Max search depth: 7
-Max search time: 5.0 sec
-Total evals at each depth: {5: 53511, 2: 276, 1: 48, 4: 10038, 3: 1821, 6: 292984, 7: 22189931}
-Average eval depth: 7.0
-Average eval time: 1.2
-Average branching factor: 6.4
-Next player: Defender
-
-      0   1   2   3   4
- A:   .   .   .   .  dT1
- B:  dA4  .   .  aF9  .
- C:  dT6  .   .  aV9 aA9
- D:   .   .   .   .   .
- E:  dF9  .   .   .   .
-
-Defender: repair from C0 to B0
-repaired 3 health points
-Compute time: 0.2 sec
-Average depth: 5.5
-Heuristic score: -5381
-
-48/100 moves played
-Max search depth: 7
-Max search time: 5.0 sec
-Total evals at each depth: {5: 53940, 2: 280, 1: 49, 4: 10130, 3: 1844, 6: 294738, 7: 22252296}
-Average eval depth: 7.0
-Average eval time: 1.2
-Average branching factor: 6.4
-Next player: Attacker
-
-      0   1   2   3   4
- A:   .   .   .   .  dT1
- B:  dA7  .   .  aF9  .
- C:  dT6  .   .  aV9 aA9
- D:   .   .   .   .   .
- E:  dF9  .   .   .   .
-
-Attacker: move from C3 to C2
-Compute time: 0.1 sec
-Average depth: 4.8
-Heuristic score: 3750
-
-49/100 moves played
-Max search depth: 7
-Max search time: 5.0 sec
-Total evals at each depth: {5: 54301, 2: 284, 1: 50, 4: 10195, 3: 1861, 6: 296303, 7: 22312178}
-Average eval depth: 7.0
-Average eval time: 1.2
-Average branching factor: 6.4
-Next player: Defender
-
-      0   1   2   3   4
- A:   .   .   .   .  dT1
- B:  dA7  .   .  aF9  .
- C:  dT6  .  aV9  .  aA9
- D:   .   .   .   .   .
- E:  dF9  .   .   .   .
-
-Defender: move from C0 to C1
-Compute time: 0.3 sec
-Average depth: 5.3
-Heuristic score: -268077
-
-50/100 moves played
-Max search depth: 7
-Max search time: 5.0 sec
-Total evals at each depth: {5: 55398, 2: 292, 1: 51, 4: 10458, 3: 1906, 6: 302536, 7: 22420688}
-Average eval depth: 7.0
-Average eval time: 1.1
-Average branching factor: 6.4
-Next player: Attacker
-
-      0   1   2   3   4
- A:   .   .   .   .  dT1
- B:  dA7  .   .  aF9  .
- C:   .  dT6 aV9  .  aA9
- D:   .   .   .   .   .
- E:  dF9  .   .   .   .
-
-Attacker: attack from C2 to C1
-combat damage: to source = 6, to target = 6
-Compute time: 0.1 sec
-Average depth: 5.4
-Heuristic score: 2147483590
-
-51/100 moves played
-Max search depth: 7
-Max search time: 5.0 sec
-Total evals at each depth: {5: 56212, 2: 296, 1: 52, 4: 10584, 3: 1939, 6: 305326, 7: 22521100}
-Average eval depth: 7.0
-Average eval time: 1.1
-Average branching factor: 6.4
-Next player: Defender
-
-      0   1   2   3   4
- A:   .   .   .   .  dT1
- B:  dA7  .   .  aF9  .
- C:   .   .  aV3  .  aA9
- D:   .   .   .   .   .
- E:  dF9  .   .   .   .
-
-Defender: self-destruct at A4
-self-destructed for 2 total damage
-Compute time: 0.1 sec
-Average depth: 4.8
-Heuristic score: -2147483591
-
 52/100 moves played
 Max search depth: 7
 Max search time: 5.0 sec
-Total evals at each depth: {5: 57006, 2: 302, 1: 53, 4: 10782, 3: 1976, 6: 308483, 7: 22548835}
-Average eval depth: 7.0
-Average eval time: 1.1
-Average branching factor: 6.3
+Evals by depth: 5=0.1% 6=0.8% 7=48% 8=51%
+Average eval depth: 7.5
+Average eval time: 1.8
+Average branching factor: 5.2
+Perf. Evals: 611.0k/s  Nodes: 758.2k/s
 Next player: Attacker
 
       0   1   2   3   4
- A:   .   .   .   .   .
- B:  dA7  .   .  aF7  .
- C:   .   .  aV3  .  aA9
- D:   .   .   .   .   .
- E:  dF9  .   .   .   .
+ A:  dA9  .  dT9 dF7  .
+ B:   .  dT9  .  aA7  .
+ C:   .  dP7 aF1  .  aV9
+ D:  dF9  .  aP9  .   .
+ E:   .  aV9  .   .   .
 
-Attacker: move from C2 to C1
-Compute time: 0.0 sec
-Average depth: 4.7
-Heuristic score: 2147483590
+Attacker: attack from B3 to A3
+combat damage: to source = 1, to target = 1
+Compute time: 0.6 sec
+Average depth: 5.8
+Heuristic score: -35000
 
 53/100 moves played
-Max search depth: 7
+Max search depth: 8
 Max search time: 5.0 sec
-Total evals at each depth: {5: 57303, 2: 308, 1: 54, 4: 10878, 3: 1994, 6: 309321, 7: 22563520}
-Average eval depth: 7.0
-Average eval time: 1.1
-Average branching factor: 6.3
+Evals by depth: 5=0.1% 6=0.8% 7=49% 8=50%
+Average eval depth: 7.5
+Average eval time: 1.8
+Average branching factor: 5.1
+Perf. Evals: 613.8k/s  Nodes: 762.3k/s
 Next player: Defender
 
       0   1   2   3   4
- A:   .   .   .   .   .
- B:  dA7  .   .  aF7  .
- C:   .  aV3  .   .  aA9
- D:   .   .   .   .   .
- E:  dF9  .   .   .   .
+ A:  dA9  .  dT9 dF6  .
+ B:   .  dT9  .  aA6  .
+ C:   .  dP7 aF1  .  aV9
+ D:  dF9  .  aP9  .   .
+ E:   .  aV9  .   .   .
 
-Defender: move from E0 to E1
-Compute time: 0.0 sec
-Average depth: 3.8
-Heuristic score: -2147483591
+Defender: self-destruct at A3
+self-destructed for 4 total damage
+Compute time: 3.2 sec
+Average depth: 6.7
+Heuristic score: 2147483587
 
 54/100 moves played
-Max search depth: 7
+Max search depth: 8
 Max search time: 5.0 sec
-Total evals at each depth: {5: 57582, 2: 314, 1: 55, 4: 10962, 3: 2019, 6: 309930, 7: 22567385}
-Average eval depth: 7.0
-Average eval time: 1.1
-Average branching factor: 6.3
+Evals by depth: 5=0.1% 6=0.8% 7=48% 8=52%
+Average eval depth: 7.5
+Average eval time: 1.8
+Average branching factor: 4.9
+Perf. Evals: 614.1k/s  Nodes: 772.1k/s
 Next player: Attacker
 
       0   1   2   3   4
- A:   .   .   .   .   .
- B:  dA7  .   .  aF7  .
- C:   .  aV3  .   .  aA9
- D:   .   .   .   .   .
- E:   .  dF9  .   .   .
+ A:  dA9  .  dT7  .   .
+ B:   .  dT9  .  aA4  .
+ C:   .  dP7 aF1  .  aV9
+ D:  dF9  .  aP9  .   .
+ E:   .  aV9  .   .   .
 
-Attacker: move from C1 to B1
-Compute time: 0.0 sec
-Average depth: 4.4
-Heuristic score: 2147483590
+Attacker: move from B3 to A3
+Compute time: 5.0 sec
+Average depth: 4.1
+Heuristic score: -104010
 
 55/100 moves played
 Max search depth: 7
 Max search time: 5.0 sec
-Total evals at each depth: {5: 57923, 2: 323, 1: 56, 4: 11089, 3: 2057, 6: 310609, 7: 22576101}
-Average eval depth: 7.0
-Average eval time: 1.0
-Average branching factor: 6.3
+Evals by depth: 5=0.1% 6=0.8% 7=46% 8=53%
+Average eval depth: 7.5
+Average eval time: 1.9
+Average branching factor: 5.0
+Perf. Evals: 607.0k/s  Nodes: 760.1k/s
 Next player: Defender
 
       0   1   2   3   4
- A:   .   .   .   .   .
- B:  dA7 aV3  .  aF7  .
- C:   .   .   .   .  aA9
- D:   .   .   .   .   .
- E:   .  dF9  .   .   .
+ A:  dA9  .  dT7 aA4  .
+ B:   .  dT9  .   .   .
+ C:   .  dP7 aF1  .  aV9
+ D:  dF9  .  aP9  .   .
+ E:   .  aV9  .   .   .
 
-Defender: self-destruct at E1
-self-destructed for 0 total damage
-Compute time: 0.0 sec
-Average depth: 2.5
-Heuristic score: -2147483591
+Defender: self-destruct at A2
+self-destructed for 4 total damage
+Compute time: 1.6 sec
+Average depth: 6.0
+Heuristic score: 2147483587
 
 56/100 moves played
 Max search depth: 7
 Max search time: 5.0 sec
-Total evals at each depth: {5: 58007, 2: 327, 1: 58, 4: 11125, 3: 2080, 6: 310774, 7: 22577324}
-Average eval depth: 7.0
-Average eval time: 1.0
-Average branching factor: 6.3
+Evals by depth: 5=0.1% 6=0.8% 7=46% 8=53%
+Average eval depth: 7.5
+Average eval time: 1.9
+Average branching factor: 5.0
+Perf. Evals: 604.5k/s  Nodes: 756.2k/s
 Next player: Attacker
 
       0   1   2   3   4
- A:   .   .   .   .   .
- B:  dA7 aV3  .  aF7  .
- C:   .   .   .   .  aA9
- D:   .   .   .   .   .
- E:   .   .   .   .   .
+ A:  dA9  .   .  aA2  .
+ B:   .  dT7  .   .   .
+ C:   .  dP7 aF1  .  aV9
+ D:  dF9  .  aP9  .   .
+ E:   .  aV9  .   .   .
 
-Attacker: attack from B1 to B0
-combat damage: to source = 3, to target = 9
-Compute time: 0.0 sec
-Average depth: 2.9
-Heuristic score: 2147483590
+Attacker: move from C4 to D4
+Compute time: 0.7 sec
+Average depth: 5.5
+Heuristic score: -2147483588
 
 57/100 moves played
 Max search depth: 7
 Max search time: 5.0 sec
-Total evals at each depth: {5: 58026, 2: 336, 1: 60, 4: 11139, 3: 2086, 6: 310826, 7: 22577707}
-Average eval depth: 7.0
-Average eval time: 1.0
-Average branching factor: 6.3
+Evals by depth: 5=0.1% 6=0.9% 7=47% 8=52%
+Average eval depth: 7.5
+Average eval time: 1.8
+Average branching factor: 4.9
+Perf. Evals: 605.0k/s  Nodes: 758.7k/s
 Next player: Defender
 
       0   1   2   3   4
- A:   .   .   .   .   .
- B:   .   .   .  aF7  .
- C:   .   .   .   .  aA9
- D:   .   .   .   .   .
- E:   .   .   .   .   .
+ A:  dA9  .   .  aA2  .
+ B:   .  dT7  .   .   .
+ C:   .  dP7 aF1  .   .
+ D:  dF9  .  aP9  .  aV9
+ E:   .  aV9  .   .   .
 
-Attacker wins in 57 moves!
+Defender: move from B1 to B2
+Compute time: 0.7 sec
+Average depth: 5.6
+Heuristic score: 2147483587
+
+58/100 moves played
+Max search depth: 7
+Max search time: 5.0 sec
+Evals by depth: 5=0.2% 6=0.9% 7=47% 8=52%
+Average eval depth: 7.5
+Average eval time: 1.8
+Average branching factor: 4.9
+Perf. Evals: 604.3k/s  Nodes: 757.5k/s
+Next player: Attacker
+
+      0   1   2   3   4
+ A:  dA9  .   .  aA2  .
+ B:   .   .  dT7  .   .
+ C:   .  dP7 aF1  .   .
+ D:  dF9  .  aP9  .  aV9
+ E:   .  aV9  .   .   .
+
+Attacker: move from E1 to E0
+Compute time: 0.4 sec
+Average depth: 5.1
+Heuristic score: -2147483588
+
+59/100 moves played
+Max search depth: 8
+Max search time: 5.0 sec
+Evals by depth: 5=0.2% 6=0.9% 7=47% 8=52%
+Average eval depth: 7.5
+Average eval time: 1.8
+Average branching factor: 4.9
+Perf. Evals: 604.4k/s  Nodes: 758.9k/s
+Next player: Defender
+
+      0   1   2   3   4
+ A:  dA9  .   .  aA2  .
+ B:   .   .  dT7  .   .
+ C:   .  dP7 aF1  .   .
+ D:  dF9  .  aP9  .  aV9
+ E:  aV9  .   .   .   .
+
+Defender: self-destruct at B2
+self-destructed for 6 total damage
+Compute time: 0.4 sec
+Average depth: 5.3
+Heuristic score: 2147483587
+
+60/100 moves played
+Max search depth: 9
+Max search time: 5.0 sec
+Evals by depth: 5=0.2% 6=0.9% 7=47% 8=52%
+Average eval depth: 7.5
+Average eval time: 1.8
+Average branching factor: 4.9
+Perf. Evals: 604.6k/s  Nodes: 760.3k/s
+Next player: Attacker
+
+      0   1   2   3   4
+ A:  dA9  .   .   .   .
+ B:   .   .   .   .   .
+ C:   .  dP5  .   .   .
+ D:  dF9  .  aP9  .  aV9
+ E:  aV9  .   .   .   .
+
+Defender wins in 60 moves!
 ```
 
 ### Example output (full AI vs AI game)
