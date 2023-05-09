@@ -762,6 +762,9 @@ impl Game {
                 if stats.total_effective_branches > 0 {
                     writeln!(w,"Average branching factor: {:.1}",stats.total_moves_per_effective_branch as f32/stats.total_effective_branches as f32)?; 
                 }
+                if ct > 0 && stats.total_seconds > 0.0 {
+                    writeln!(w,"Perf. (kE/s): {:.0}",ct as f32/stats.total_seconds/1000.0)?; 
+                }
             }            
             writeln!(w,"Next player: {}",self.player())?;
         }

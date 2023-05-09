@@ -12,7 +12,7 @@ enum-iterator = "1.4.0"
 instant = "0.1.12"
 rand = "0.8.5"
 rayon = { version = "1.7.0", optional = true }
-regex = "1.7.3"
+regex = "1.7.4"
 smart-default = "0.7.1"
 
 [profile.dev]
@@ -27,7 +27,8 @@ codegen-units = 1
 strip = true
 
 [features]
-default = ["rand-actions", "board_map", "stats"]
+#default = ["rand-actions", "board_map", "stats"]
+default = ["rand-actions", "board_vec", "stats"]
 rand-actions = []
 board_vec = []
 board_array = []
