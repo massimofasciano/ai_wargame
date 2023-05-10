@@ -123,6 +123,18 @@ impl Heuristics {
         self.defender_max = h.clone();
         self.attacker_min = h;
     }
+    pub fn set_e1(&mut self) {
+        self.set_attack_heuristics(score_heuristic());
+        self.set_defense_heuristics(score_heuristic());
+    }
+    pub fn set_e2(&mut self) {
+        self.set_attack_heuristics(Default::default());
+        self.set_defense_heuristics(Default::default());
+    }
+    pub fn set_e3e4(&mut self) {
+        self.set_attack_heuristics(default_attacker_heuristic());
+        self.set_defense_heuristics(default_defender_heuristic());
+    }
 }
 
 impl Default for Heuristics {
@@ -136,24 +148,19 @@ impl Default for Heuristics {
     }
 }
 
-pub fn simple_heuristic_1() -> Heuristic {
+pub fn score_heuristic() -> Heuristic {
     // simple score total by unit without health
-    units_score_health_weights_bias(1,1,1,0,unit_score_simple)
-}
-
-pub fn simple_heuristic_2() -> Heuristic {
-    // simple health total by unit (all units same value)
-    units_score_health_weights_bias(1,1,0,1,|_|1)
+    units_score_health_weights_bias(1,1,1,0,unit_score)
 }
 
 pub fn default_attacker_heuristic() -> Heuristic {
-    units_score_health_weights_bias(10,10,100, 1, unit_score) * 10
+    units_score_health_weights_bias(1,1,50, 1, unit_score)
         + ai_distance(2,1)
-        - game_moves() * 100
+        - game_moves()
 }
 
 pub fn default_defender_heuristic() -> Heuristic {
-    units_score_health_weights_bias(10,10,10, 1, unit_score) * 10
+    units_score_health_weights_bias(1,1,10, 1, unit_score)
 }
 
 pub fn ai_distance(weight_friend: HeuristicScore, weight_opponent: HeuristicScore) -> Heuristic {
@@ -225,20 +232,10 @@ pub fn unit_score(unit_type: UnitType) -> HeuristicScore {
     use UnitType::*;
     match unit_type {
         AI => 0, // already included in end of game score
-        Virus => 30,
-        Tech => 30,
-        Firewall => 10,
-        Program => 10,
-    }
-}
-
-pub fn unit_score_simple(unit_type: UnitType) -> HeuristicScore {
-    use UnitType::*;
-    match unit_type {
-        AI => 2,
-        Virus => 2,
-        Tech => 2,
+        Virus => 3,
+        Tech => 3,
         Firewall => 1,
         Program => 1,
     }
 }
+

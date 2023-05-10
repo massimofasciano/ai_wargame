@@ -25,6 +25,7 @@ fn main() {
     opts.optopt("d", "depth", "maximum search depth", "INT");
     opts.optopt("s", "seconds", "maximum search time in seconds", "FLOAT");
     opts.optopt("m", "moves", "maximum moves in a game", "INT");
+    opts.optopt("H", "heuristics", "select heuristics set to use", "e1|e2|e3e4");
 
     opts.optflag("R", "no-rand-traversal", "disable random traversal of possible actions");
     opts.optflag("A", "no-auto-depth", "don't try to auto adjust the search depth dynamically");
@@ -84,6 +85,22 @@ fn main() {
     }
     if matches.opt_present("moves") {
         options.max_moves = matches.opt_str("moves").and_then(|s|s.parse::<usize>().ok());
+    }
+    match matches.opt_str("heuristics").as_deref() {
+        None => {},
+        Some("e1") => {
+            options.heuristics.set_e1();
+        },
+        Some("e2") => {
+            options.heuristics.set_e2();
+        },
+        Some("e3e4") => {
+            options.heuristics.set_e3e4();
+        },
+        Some(_) => {
+            print_usage(&program, opts);
+            exit(1)
+        },
     }
 
     options.multi_threaded = false;
