@@ -30,6 +30,7 @@ fn main() {
     opts.optflag("A", "no-auto-depth", "don't try to auto adjust the search depth dynamically");
     opts.optflag("b", "benchmark", "determine starting max-depth via benchmark");
     opts.optflag("D", "no-debug", "disable debug information");
+    opts.optflag("P", "no-pruning", "disable alpha-beta pruning");
 
     #[cfg(feature="rayon")]
     opts.optflag("t", "multi-threaded", "enable multithreading (experimental: usually slower)");
@@ -74,6 +75,7 @@ fn main() {
     options.debug = !matches.opt_present("no-debug");
     options.rand_traversal = !matches.opt_present("no-rand-traversal");
     options.adjust_max_depth = !matches.opt_present("no-auto-depth");
+    options.pruning = !matches.opt_present("no-pruning");
     if matches.opt_present("depth") {
         options.max_depth = matches.opt_str("depth").and_then(|s|s.parse::<usize>().ok());
     }

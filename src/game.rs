@@ -96,6 +96,8 @@ pub struct GameOptions {
     pub multi_threaded : bool,
     #[default(true)]
     pub rand_traversal : bool,
+    #[default(true)]
+    pub pruning: bool,
 }
 
 impl Default for Game {
@@ -580,7 +582,7 @@ impl Game {
         }
         score
     }
-    pub fn suggest_action_rec(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
+    pub fn minimax_alpha_beta(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
         #[cfg(feature="stats")]
         {
             self.stats.lock().expect("should get a lock").total_nodes += 1;
@@ -623,19 +625,21 @@ impl Game {
             for possible_action in possible_actions {
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-                let (score, _, rec_avg_depth) = possible_game.suggest_action_rec(!maximizing_player, player, depth+1, alpha, beta, start_time);
+                let (score, _, rec_avg_depth) = possible_game.minimax_alpha_beta(!maximizing_player, player, depth+1, alpha, beta, start_time);
                 total_depth += rec_avg_depth;
                 total_count += 1;
                 if maximizing_player && score >= best_score || !maximizing_player && score <= best_score {
                     best_score = score;
                     best_action = Some(possible_action);
                 }
-                if maximizing_player {
-                    if best_score > beta { break; }
-                    alpha = std::cmp::max(alpha, best_score);
-                } else {
-                    if best_score < alpha { break; }
-                    beta = std::cmp::min(beta, best_score);
+                if self.options.pruning {
+                    if maximizing_player {
+                        if best_score > beta { break; }
+                        alpha = std::cmp::max(alpha, best_score);
+                    } else {
+                        if best_score < alpha { break; }
+                        beta = std::cmp::min(beta, best_score);
+                    }
                 }
             }
             if total_count == 0 {
@@ -652,7 +656,7 @@ impl Game {
         }
     }
     #[cfg(feature="rayon")]
-    pub fn suggest_action_rec_par(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
+    pub fn minimax_alpha_beta_par(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
         assert_eq!(maximizing_player,true,"call only at top level");
         #[cfg(feature="stats")]
         {
@@ -672,7 +676,7 @@ impl Game {
             .map(|&possible_action|{
                 let mut possible_game = self.clone();
                 possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-                let suggest = possible_game.suggest_action_rec(!maximizing_player, player, depth+1, alpha, beta, start_time);
+                let suggest = possible_game.minimax_alpha_beta(!maximizing_player, player, depth+1, alpha, beta, start_time);
                 (suggest,possible_action)
             }).collect::<Vec<_>>();
         for ((score, _, rec_avg_depth),possible_action) in possible_games {
@@ -693,12 +697,12 @@ impl Game {
         let start_time = Instant::now();
         #[cfg(not(feature="rayon"))]
         let (score, suggestion, avg_depth) = 
-            self.suggest_action_rec(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
+            self.minimax_alpha_beta(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         #[cfg(feature="rayon")]
         let (score, suggestion, avg_depth) = if self.options().multi_threaded {
-            self.suggest_action_rec_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
+            self.minimax_alpha_beta_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
         } else {
-            self.suggest_action_rec(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
+            self.minimax_alpha_beta(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
         };
         let elapsed_seconds = Instant::now().duration_since(start_time).as_secs_f32();
         (score,suggestion,elapsed_seconds,avg_depth)
@@ -761,17 +765,18 @@ impl Game {
         }
         if self.options.debug {
             if let Some(max_depth) = self.options.max_depth {
-                writeln!(w,"Max search depth: {}",max_depth)?;
+                writeln!(w,"Current max search depth: {}",max_depth)?;
             }
             if let Some(max_seconds) = self.options.max_seconds {
-                writeln!(w,"Max search time: {:.1} sec",max_seconds)?;
+                writeln!(w,"Current max search time: {:.1} sec",max_seconds)?;
             }
             #[cfg(feature="stats")]
             {
                 let stats = self.stats.lock().expect("should get a lock");
                 let (dc, counts_total) = stats.depth_counts.iter().fold((0,0),|(dc,ct),(d,c)| (dc+d*c,ct+c));
                 if counts_total > 0 {
-                    writeln!(w,"Evals by depth: {}", stats.depth_counts.iter()
+                    writeln!(w,"Cumulative evals: {}",rescale_number_to_string(counts_total as f32))?;
+                    writeln!(w,"Cumulative % evals by depth: {}", stats.depth_counts.iter()
                         .sorted_by_key(|x| x.0)
                         .filter_map(|(k,v)|{
                             let pct = *v as f64 * 100.0 / counts_total as f64;
@@ -781,10 +786,15 @@ impl Game {
                                 Some(format!("{k}={}%", number_digits_precision_to_string(pct,1)))
                             }
                         }).join(" "))?;
+                    writeln!(w,"Cumulative evals by depth: {}", stats.depth_counts.iter()
+                        .sorted_by_key(|x| x.0)
+                        .map(|(k,v)|{
+                                format!("{k}={}", rescale_number_to_string(*v as f32))
+                        }).join(" "))?;
                     writeln!(w,"Average eval depth: {:.1}",dc as f32/counts_total as f32)?;
                 }
                 if self.total_moves() > 0 {
-                    writeln!(w,"Average eval time: {:.1}",stats.total_seconds as f32/self.total_moves() as f32)?; 
+                    writeln!(w,"Average time per move: {:.1}",stats.total_seconds as f32/self.total_moves() as f32)?; 
                 }
                 if stats.total_effective_branches > 0 {
                     writeln!(w,"Average branching factor: {:.1}",stats.total_moves_per_effective_branch as f32/stats.total_effective_branches as f32)?; 
