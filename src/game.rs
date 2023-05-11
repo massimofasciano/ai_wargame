@@ -98,6 +98,8 @@ pub struct GameOptions {
     pub rand_traversal : bool,
     #[default(true)]
     pub pruning: bool,
+    #[default(1)]
+    pub parallel_levels : usize,
 }
 
 impl Default for Game {
@@ -657,53 +659,197 @@ impl Game {
     }
     #[cfg(feature="rayon")]
     pub fn minimax_alpha_beta_par(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
-        assert_eq!(maximizing_player,true,"call only at top level");
+        assert!(self.options.parallel_levels > 0,"this function should not be called if parallel levels is 0");
         #[cfg(feature="stats")]
         {
             self.stats.lock().expect("should get a lock").total_nodes += 1;
         }
-        let mut best_action = None;
-        let mut best_score = heuristics::MIN_HEURISTIC_SCORE;
-        let mut total_depth = 0.0;
-        let mut total_count = 0;
-        let mut possible_actions = self.player_unit_coords(self.player())
-            .flat_map(|coord|self.possible_actions_from_coord(coord))
-            .collect::<Vec<_>>();
-        if self.options.rand_traversal {
-            possible_actions.shuffle(&mut rand::thread_rng());
-        }
-        let possible_games = possible_actions.par_iter()
-            .map(|&possible_action|{
-                let mut possible_game = self.clone();
-                possible_game.play_turn_from_action(possible_action).expect("action should be valid");
-                let suggest = possible_game.minimax_alpha_beta(!maximizing_player, player, depth+1, alpha, beta, start_time);
-                (suggest,possible_action)
-            }).collect::<Vec<_>>();
-        for ((score, _, rec_avg_depth),possible_action) in possible_games {
-            total_depth += rec_avg_depth;
-            total_count += 1;
-            if score > best_score {
-                best_score = score;
-                best_action = Some(possible_action);
+        let mut timeout = false;
+        if let Some(max_seconds) = self.options.max_seconds {
+            let elapsed_seconds = Instant::now().duration_since(start_time).as_secs_f32();
+            if elapsed_seconds > max_seconds {
+                timeout = true;
             }
         }
-        if total_count == 0 {
-            (best_score, best_action, depth as f32)
+        let mut opt_end_game_result : Option<Option<Player>> = None;
+        if timeout && self.options.min_depth.is_some() && depth >= self.options.min_depth.unwrap()
+            || self.options.max_depth.is_some() && depth >= self.options.max_depth.unwrap()
+            || { 
+                let end_game_result = self.end_game_result();
+                opt_end_game_result=Some(end_game_result); 
+                end_game_result.is_some()
+            } 
+        {
+            (self.heuristic(player,maximizing_player,depth,opt_end_game_result),None,depth as f32)
         } else {
-            (best_score, best_action, total_depth / total_count as f32)
+            let mut best_action = None;
+            let mut best_score;
+            let mut total_depth = 0.0;
+            let mut total_count = 0;
+            let mut possible_actions = self.player_unit_coords(self.player())
+                .flat_map(|coord|self.possible_actions_from_coord(coord))
+                .collect::<Vec<_>>();
+            if self.options.rand_traversal {
+                possible_actions.shuffle(&mut rand::thread_rng());
+            }
+            if maximizing_player {
+                best_score = heuristics::MIN_HEURISTIC_SCORE;
+            } else {
+                best_score = heuristics::MAX_HEURISTIC_SCORE;
+            }
+            let fold_result = possible_actions.into_par_iter().fold_with((
+                best_action,
+                best_score,
+                total_depth,
+                total_count,
+                alpha,
+                beta,
+            ), |(
+                mut best_action,
+                mut best_score,
+                mut total_depth,
+                mut total_count,
+                mut alpha,
+                mut beta,
+            ),possible_action| {
+                let mut prune = false;
+                if self.options.pruning {
+                    if maximizing_player {
+                        if best_score > beta { prune=true; }
+                    } else {
+                        if best_score < alpha { prune=true; }
+                    }
+                }
+                if !prune {
+                    let mut possible_game = self.clone();
+                    possible_game.play_turn_from_action(possible_action).expect("action should be valid");
+                    let (score, _, rec_avg_depth) = if self.options.parallel_levels-1 > depth {
+                        possible_game.minimax_alpha_beta_par(!maximizing_player, player, depth+1, alpha, beta, start_time)
+                    } else {
+                        possible_game.minimax_alpha_beta(!maximizing_player, player, depth+1, alpha, beta, start_time)
+                    };
+                    total_depth += rec_avg_depth;
+                    total_count += 1;
+                    if maximizing_player && score >= best_score || !maximizing_player && score <= best_score {
+                        best_score = score;
+                        best_action = Some(possible_action);
+                    }
+                    if self.options.pruning {
+                        if maximizing_player {
+                            alpha = std::cmp::max(alpha, best_score);
+                        } else {
+                            beta = std::cmp::min(beta, best_score);
+                        }
+                    }
+                }
+                (
+                    best_action,
+                    best_score,
+                    total_depth,
+                    total_count,
+                    alpha,
+                    beta,
+                )   
+            });
+            (
+                best_action,
+                best_score,
+                total_depth,
+                total_count,
+                _,
+                _,
+            ) = fold_result.reduce_with(|(
+                mut best_action,
+                mut best_score,
+                total_depth,
+                total_count,
+                alpha,
+                beta,
+            ),(
+                best_action2,
+                best_score2,
+                total_depth2,
+                total_count2,
+                _,
+                _,
+            )| {
+                if best_score2 > best_score {
+                    best_score = best_score2;
+                    best_action = best_action2;
+                }
+                (
+                    best_action,
+                    best_score,
+                    total_depth+total_depth2,
+                    total_count+total_count2,
+                    alpha,
+                    beta,
+                )   
+            }).unwrap();
+            if total_count == 0 {
+                (self.heuristic(player,maximizing_player,depth,opt_end_game_result),None,depth as f32)
+            } else {
+                #[cfg(feature="stats")]
+                {   // branching stats
+                    let mut stats = self.stats.lock().expect("should get a lock");
+                    stats.total_moves_per_effective_branch += total_count;
+                    stats.total_effective_branches += 1;
+                }
+                (best_score, best_action, total_depth / total_count as f32)
+            }
         }
     }
+    // #[cfg(feature="rayon")]
+    // pub fn minimax_alpha_beta_par(&self, maximizing_player: bool, player: Player, depth: usize, alpha: HeuristicScore, beta: HeuristicScore, start_time: Instant) -> (HeuristicScore, Option<Action>, f32) {
+    //     assert_eq!(maximizing_player,true,"call only at top level");
+    //     #[cfg(feature="stats")]
+    //     {
+    //         self.stats.lock().expect("should get a lock").total_nodes += 1;
+    //     }
+    //     let mut best_action = None;
+    //     let mut best_score = heuristics::MIN_HEURISTIC_SCORE;
+    //     let mut total_depth = 0.0;
+    //     let mut total_count = 0;
+    //     let mut possible_actions = self.player_unit_coords(self.player())
+    //         .flat_map(|coord|self.possible_actions_from_coord(coord))
+    //         .collect::<Vec<_>>();
+    //     if self.options.rand_traversal {
+    //         possible_actions.shuffle(&mut rand::thread_rng());
+    //     }
+    //     let possible_games = possible_actions.par_iter()
+    //         .map(|&possible_action|{
+    //             let mut possible_game = self.clone();
+    //             possible_game.play_turn_from_action(possible_action).expect("action should be valid");
+    //             let suggest = possible_game.minimax_alpha_beta(!maximizing_player, player, depth+1, alpha, beta, start_time);
+    //             (suggest,possible_action)
+    //         }).collect::<Vec<_>>();
+    //     for ((score, _, rec_avg_depth),possible_action) in possible_games {
+    //         total_depth += rec_avg_depth;
+    //         total_count += 1;
+    //         if score > best_score {
+    //             best_score = score;
+    //             best_action = Some(possible_action);
+    //         }
+    //     }
+    //     if total_count == 0 {
+    //         (best_score, best_action, depth as f32)
+    //     } else {
+    //         (best_score, best_action, total_depth / total_count as f32)
+    //     }
+    // }
     pub fn suggest_action(&mut self) -> (HeuristicScore, Option<Action>, f32, f32) {
         let start_time = Instant::now();
         #[cfg(not(feature="rayon"))]
         let (score, suggestion, avg_depth) = 
             self.minimax_alpha_beta(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time);
         #[cfg(feature="rayon")]
-        let (score, suggestion, avg_depth) = if self.options().multi_threaded {
-            self.minimax_alpha_beta_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
-        } else {
-            self.minimax_alpha_beta(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
-        };
+        let (score, suggestion, avg_depth) = 
+            if self.options().multi_threaded && self.options.parallel_levels > 0 
+            {
+                self.minimax_alpha_beta_par(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
+            } else {
+                self.minimax_alpha_beta(true, self.player(), 0, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE, start_time)
+            };
         let elapsed_seconds = Instant::now().duration_since(start_time).as_secs_f32();
         (score,suggestion,elapsed_seconds,avg_depth)
     }

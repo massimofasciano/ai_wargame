@@ -37,6 +37,8 @@ fn main() {
     opts.optflag("t", "multi-threaded", "enable multithreading (experimental: usually slower)");
     #[cfg(feature = "rayon")]
     opts.optopt("T", "threads", "mumber of computing threads to use (defaults to total cores)", "INT");
+    #[cfg(feature = "rayon")]
+    opts.optopt("L", "parallel-levels", "apply parallel processing down to how many search levels", "INT");
     opts.optflag("h", "help", "print this help menu");
 
     let matches = match opts.parse(&args[1..]) {
@@ -109,6 +111,9 @@ fn main() {
         options.multi_threaded = true;
         if let Some(threads) = matches.opt_str("threads").and_then(|s|s.parse::<usize>().ok()) {
             rayon::ThreadPoolBuilder::new().num_threads(threads).build_global().unwrap();
+        }
+        if let Some(parallel_levels) = matches.opt_str("parallel-levels").and_then(|s|s.parse::<usize>().ok()) {
+            options.parallel_levels = parallel_levels;
         }
     }
 
