@@ -1,6 +1,6 @@
 [package]
 name = "ai_wargame"
-version = "0.19.1"
+version = "0.19.2"
 edition = "2021"
 
 [dependencies]
@@ -30,7 +30,7 @@ codegen-units = 1
 strip = true
 
 [features]
-default = ["board_vec", "stats", "rayon"]
+default = ["board_vec", "stats"]
 board_vec = []
 board_array = []
 board_map = []
