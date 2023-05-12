@@ -1,4 +1,4 @@
-use crate::{Coord, Health};
+use crate::{Coord, Health, CoordPair};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Action {
@@ -23,6 +23,27 @@ impl std::fmt::Display for Action {
             Self::SelfDestruct { from } => 
                 format!("self-destruct at {}",from),
         })
+    }
+}
+
+impl Action {
+    pub fn into_coord_pair(self) -> Option<CoordPair> {
+        match self {
+            Self::Pass 
+                => None,
+            Self::Move { from, to }
+                | Self::Repair { from, to }
+                | Self::Attack { from, to } 
+                => Some(CoordPair::new(from, to)),
+            Self::SelfDestruct { from } 
+                => Some(CoordPair::new(from, from)),
+        }
+    }
+}
+
+impl Into<Option<CoordPair>> for Action {
+    fn into(self) -> Option<CoordPair> {
+        self.into_coord_pair()
     }
 }
 

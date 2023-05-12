@@ -5,14 +5,14 @@ use crate::UnitType;
 use crate::{Coord, Game};
 
 impl Game {
-    pub fn to_html_board_string(&self, css_class: String, fn_click: String) -> String {
+    pub fn to_html_board_string(&self, css_class: String, id: String, fn_click: String) -> String {
         let mut html = String::new();
-        self.to_html_board_writer(&mut html, css_class, fn_click).expect("write to string can't fail");
+        self.to_html_board_writer(&mut html, css_class, id, fn_click).expect("write to string can't fail");
         html
     }
-    pub fn to_html_board_writer(&self, w : &mut impl FmtWrite, css_class: String, fn_click: String) -> FmtResult {
+    pub fn to_html_board_writer(&self, w : &mut impl FmtWrite, css_class: String, id: String, fn_click: String) -> FmtResult {
         let half = (self.dim()+1) / 2;
-        write!(w,"<table class=\"{css_class}\">")?;
+        write!(w,"<table id=\"{id}\" class=\"{css_class}\">")?;
         write!(w,"<thead>")?;
         write!(w,"<tr>")?;
         write!(w,"<th colspan={half} class=\"{css_class}_info\">")?;
@@ -47,7 +47,7 @@ impl Game {
             write!(w,"<th class=\"{}_row_name\">{}</th>",css_class,(row as u8 +'A' as u8) as char)?;
             for col in 0..self.dim() {
                 let cell = self[Coord::new(row,col)];
-                write!(w,"<td class=\"{css_class}_cell\" onclick=\"{fn_click}({row},{col})\">")?;
+                write!(w,"<td id=\"{id}-{row}-{col}\" class=\"{css_class}_cell\" onclick=\"{fn_click}({row},{col})\">")?;
                 if !cell.is_empty() {
                     let player = cell.player().expect("cell not empty");
                     let unit = cell.unit().expect("cell not empty");

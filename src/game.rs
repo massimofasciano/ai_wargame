@@ -918,7 +918,7 @@ impl Game {
             Ok(false)
         }
     }
-    pub fn computer_play_turn(&mut self, opt_w: Option<&mut impl IoWrite>) -> IoResult<()> {
+    pub fn computer_play_turn(&mut self, opt_w: Option<&mut impl IoWrite>) -> IoResult<Option<Action>> {
         let (score,best_action,elapsed_seconds,avg_depth) = self.suggest_action();
         #[cfg(feature="stats")]
         {
@@ -940,13 +940,14 @@ impl Game {
                         writeln!(w,"Heuristic score: {}", score)?;
                     }
                 }
+                Ok(Some(best_action))
             } else {
                 panic!("play turn should work");
             }
         } else {
             self.set_deadlock(true);
+            Ok(None)
         }
-        Ok(())
     }
 }
 
