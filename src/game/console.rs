@@ -106,6 +106,9 @@ impl Game {
     pub fn console_computer_play_turn(&mut self) {
         let opt_action = self.computer_play_turn(Some(&mut stdout())).expect("no errors on stdout");
         stdout().flush().expect("no errors on stdout");
+        #[cfg(not(feature="broker"))]
+        let _ = opt_action;
+        #[cfg(feature="broker")]
         if self.options().broker.is_some() && opt_action.is_some() {
             if let Some(coord_pair) = opt_action.unwrap().into_coord_pair() {
                 if let Err(error) = self.broker_post_move(coord_pair) {

@@ -1,4 +1,7 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo, DEFAULT_MAX_MOVES, DEFAULT_MAX_SECONDS, number_digits_precision_to_string, rescale_number_to_string};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo, DEFAULT_MAX_MOVES, DEFAULT_MAX_SECONDS};
+
+#[cfg(feature="stats")]
+use crate::{number_digits_precision_to_string, rescale_number_to_string};
 
 use anyhow::anyhow;
 use smart_default::SmartDefault;
@@ -7,6 +10,8 @@ use std::sync::Arc;
 use instant::Instant;
 use std::io::Write as IoWrite;
 use std::io::Result as IoResult;
+
+#[cfg(feature="stats")]
 use itertools::Itertools;
 
 #[cfg(feature="stats")]
@@ -157,12 +162,15 @@ impl Game {
     pub fn dim(&self) -> Dim {
         self.options.dim
     }
+    #[cfg(feature="stats")]
     pub fn stats(&self) -> Arc<Mutex<GameStats>> {
         self.stats.clone()
     }
+    #[cfg(feature="stats")]
     pub fn set_new_stats(&mut self) {
         self.stats = Default::default();
     }
+    #[cfg(feature="stats")]
     pub fn reset_stats(&mut self) {
         let mut stats = self.stats.lock().expect("lock should work");
         *stats = Default::default();
@@ -548,7 +556,7 @@ impl Game {
             self.state.board.iter_unit_coords().filter_map(move|to| 
                 if from==to {None} else {Some(CoordPair::new(from,to))}))
     }
-    pub fn heuristic(&self, player: Player, maximizing_player: bool, _depth: usize, opt_end_game_result: Option<Option<Player>>) -> HeuristicScore {
+    pub fn heuristic(&self, player: Player, maximizing_player: bool, depth: usize, opt_end_game_result: Option<Option<Player>>) -> HeuristicScore {
         let result = if let Some(end_game_result) = opt_end_game_result {
             end_game_result
         } else {
@@ -576,9 +584,10 @@ impl Game {
                 heuristic(self,player)
             }
         };
+        #[cfg(not(feature="stats"))]
+        let _ = depth;
         #[cfg(feature="stats")]
         {   // update total count for this depth
-            let depth = _depth;
             let mut stats = self.stats.lock().expect("lock should work");
             if let Some(count) = stats.depth_counts.remove(&depth) {
                 stats.depth_counts.insert(depth, count+1);
@@ -798,6 +807,7 @@ impl Game {
             options.max_depth = Some(max_depth);
             let mut test_game = self.clone();
             test_game.set_options(options);
+            #[cfg(feature="stats")]
             test_game.set_new_stats();
             let (_,_,elapsed_seconds,_avg_depth) = test_game.suggest_action();
             if elapsed_seconds > max_seconds*0.95 {
