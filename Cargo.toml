@@ -1,6 +1,6 @@
 [package]
 name = "ai_wargame"
-version = "0.20.3"
+version = "0.20.6"
 edition = "2021"
 
 [dependencies]
@@ -20,6 +20,7 @@ reqwest = { version = "0.11.17", features = ["blocking", "serde_json"], optional
 serde = { version = "1.0.163", features = ["derive"] , optional = true }
 serde_json = { version = "1.0.96", optional = true }
 smart-default = "0.7.1"
+openssl-sys = { version = "*", optional = true }
 
 [profile.dev]
 opt-level = 3
@@ -33,9 +34,14 @@ codegen-units = 1
 strip = true
 
 [features]
-default = ["board_vec", "stats", "broker"]
+default = ["base"]
+console = ["base", "broker"]
+web = ["base"]
+wasi = ["base"]
+base = ["board_vec", "stats"]
 board_vec = []
 board_array = []
 board_map = []
 stats = []
-broker = ["serde", "serde_json", "reqwest"]
+broker = ["serde", "serde_json", "reqwest", "openssl-sys"]
+openssl-vendored = ["openssl-sys/vendored"]

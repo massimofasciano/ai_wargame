@@ -1,33 +1,36 @@
+console = --no-default-features --features "console"
+openssl-vendored = --features "openssl-vendored"
+wasi = --no-default-features --features "wasi"
+
+broker = --broker http://localhost:8001/test
+
 build:
-	cargo build --release
+	cargo build $(console) --release
 
 run:
-	cargo run --release -- auto
+	cargo run $(console) --release -- -p auto
+
+broker-attacker:
+	cargo run $(console) --release -- -p attacker $(broker)
+
+broker-defender:
+	cargo run $(console) --release -- -p defender $(broker)
 
 clean:
 	cargo clean
 	@echo "after docker builds, might need to run: sudo rm -rf target/*-apple-darwin"
 
-rayon:
-	cargo build --release --features rayon
-
 linux:
-	cargo build --release --target=x86_64-unknown-linux-musl
-
-linux-rayon:
-	cargo build --release --features rayon --target=x86_64-unknown-linux-musl
+	cargo build $(console) $(openssl-vendored) --release --target=x86_64-unknown-linux-musl
 
 windows:
-	cargo build --release --target=x86_64-pc-windows-gnu
-
-windows-rayon:
-	cargo build --release --features rayon --target=x86_64-pc-windows-gnu
+	cargo build $(console) --release --target=x86_64-pc-windows-gnu
 
 wasi:
-	cargo wasi build --release
+	cargo wasi build $(wasi) --release
 
 wasi-run:
-	cargo wasi run --release -- auto
+	cargo wasi run $(wasi) --release -- -p auto
 
 mac-intel:
 	# cargo build --release --target x86_64-apple-darwin --features rayon
@@ -35,7 +38,7 @@ mac-intel:
     --volume "${PWD}":/root/src \
     --workdir /root/src \
       joseluisq/rust-linux-darwin-builder:1.69.0 \
-        sh -c "cargo build --release --target x86_64-apple-darwin --features rayon"
+        sh -c "cargo build $(console) --release --target x86_64-apple-darwin"
 
 mac-arm:
 	# cargo build --release --target aarch64-apple-darwin --features rayon
@@ -43,15 +46,15 @@ mac-arm:
     --volume "${PWD}":/root/src \
     --workdir /root/src \
       joseluisq/rust-linux-darwin-builder:1.69.0 \
-        sh -c "cargo build --release --target aarch64-apple-darwin --features rayon"
+        sh -c "cargo build $(console) --release --target aarch64-apple-darwin"
 
-dist-windows: windows-rayon
+dist-windows: windows
 	rm -f dist/ai_wargame_win.zip
 	cp target/x86_64-pc-windows-gnu/release/ai_wargame.exe dist
 	cd dist ; zip -9 ai_wargame_win.zip ai_wargame.exe
 	rm -f dist/ai_wargame.exe
 
-dist-linux: linux-rayon
+dist-linux: linux
 	rm -f dist/ai_wargame_linux.tar.gz
 	cp target/x86_64-unknown-linux-musl/release/ai_wargame dist
 	strip -s dist/ai_wargame
