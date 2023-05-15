@@ -103,6 +103,7 @@ pub struct GameOptions {
     pub pruning: bool,
     #[default(1)]
     pub parallel_levels : usize,
+    pub broker : Option<String>,
 }
 
 impl Default for Game {
@@ -932,10 +933,6 @@ impl Game {
         }
         if let Some(best_action) = best_action {
             if let Ok((player, action, outcome)) = self.play_turn_from_action(best_action) {
-                if let Some(coord_pair) = action.into_coord_pair() {
-                    let broker_res = self.broker_post_move(coord_pair);
-                    println!("Broker result: {broker_res:#?}");
-                }
                 if let Some(w) = opt_w {
                     writeln!(w,"{}: {}", player, action)?;
                     if outcome.is_useful_info() {

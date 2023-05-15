@@ -117,6 +117,8 @@ fn main() {
         }
     }
 
+    options.broker = Some("http://localhost:8001/test".to_string());
+
     let mut game = Game::new(options);
 
     if matches.opt_present("benchmark") {

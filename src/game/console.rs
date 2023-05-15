@@ -9,11 +9,26 @@ impl Game {
         stdout().flush().expect("no errors on stdout");
     }
     pub fn console_read_move(&self) -> Result<(Coord,Coord),String> {
-        print!("{} player, enter your next move: ",self.player());
-        stdout().flush().expect("no errors on stdout");
-        let input = stdin().lines().next().unwrap().expect("no errors on stdin");
-        let parsed = Self::parse_move(&input);
-        parsed.ok_or(input)
+        if self.options().broker.is_none() {
+            print!("{} player, enter your next move: ",self.player());
+            stdout().flush().expect("no errors on stdout");
+            let input = stdin().lines().next().unwrap().expect("no errors on stdin");
+            let parsed = Self::parse_move(&input);
+            parsed.ok_or(input)
+        } else {
+            match self.broker_get_move() {
+                Ok(Some(coords)) => {
+                    Ok((coords.from,coords.to))
+                },
+                Ok(None) => {
+                    Err("broker retry".to_string())
+                },
+                Err(error) => {
+                    eprintln!("{}",error);
+                    std::process::exit(1);
+                },
+            }
+        }
     }
     pub fn console_human_play_turn_from_coords(&mut self, from: impl Into<Coord>, to: impl Into<Coord>) -> bool {
         let result = self.human_play_turn_from_coords(Some(&mut stdout()), from, to).expect("no errors on stdout");
@@ -40,6 +55,10 @@ impl Game {
                     },
                     Err(s) if s == "quit" || s == "exit" => {
                         std::process::exit(0);
+                    },
+                    Err(s) if s == "broker retry" => {
+                        println!("Trying broker again in 500ms");
+                        std::thread::sleep(instant::Duration::from_millis(500));
                     },
                     _ => {
                         println!();
@@ -76,7 +95,15 @@ impl Game {
         }
     }
     pub fn console_computer_play_turn(&mut self) {
-        self.computer_play_turn(Some(&mut stdout())).expect("no errors on stdout");
+        let opt_action = self.computer_play_turn(Some(&mut stdout())).expect("no errors on stdout");
         stdout().flush().expect("no errors on stdout");
+        if self.options().broker.is_some() && opt_action.is_some() {
+            if let Some(coord_pair) = opt_action.unwrap().into_coord_pair() {
+                if let Err(error) = self.broker_post_move(coord_pair) {
+                    eprintln!("Could not post move to broker: {error}");
+                    std::process::exit(1);
+                }
+            }
+        }
     }
 }
