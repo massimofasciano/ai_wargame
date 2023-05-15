@@ -18,6 +18,9 @@ use rayon::prelude::*;
 pub mod console;
 pub mod web;
 
+#[cfg(feature="broker")]
+pub mod broker;
+
 #[derive(Debug, Clone)]
 pub struct Game {
     state: GameState,
@@ -929,6 +932,10 @@ impl Game {
         }
         if let Some(best_action) = best_action {
             if let Ok((player, action, outcome)) = self.play_turn_from_action(best_action) {
+                if let Some(coord_pair) = action.into_coord_pair() {
+                    let broker_res = self.broker_post_move(coord_pair);
+                    println!("Broker result: {broker_res:#?}");
+                }
                 if let Some(w) = opt_w {
                     writeln!(w,"{}: {}", player, action)?;
                     if outcome.is_useful_info() {

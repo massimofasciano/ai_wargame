@@ -1,9 +1,13 @@
 use std::ops::{Add, Sub, Neg, AddAssign, SubAssign};
 
+#[cfg(feature="serde")]
+use serde::{Serialize, Deserialize};
+
 use crate::Dim;
 
 pub type CoordTuple = (Dim,Dim);
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Coord {
     pub row: Dim,
