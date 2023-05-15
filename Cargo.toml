@@ -1,6 +1,6 @@
 [package]
 name = "ai_wargame"
-version = "0.20.6"
+version = "0.20.7"
 edition = "2021"
 
 [dependencies]
@@ -43,5 +43,5 @@ board_vec = []
 board_array = []
 board_map = []
 stats = []
-broker = ["serde", "serde_json", "reqwest", "openssl-sys"]
-openssl-vendored = ["openssl-sys/vendored"]
+broker = ["serde", "serde_json", "reqwest"]
+openssl-vendored = ["openssl-sys", "openssl-sys/vendored"]
