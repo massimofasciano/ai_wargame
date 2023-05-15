@@ -16,6 +16,7 @@ impl Game {
             let parsed = Self::parse_move(&input);
             parsed.ok_or(input)
         } else {
+            #[cfg(feature="broker")]
             match self.broker_get_move() {
                 Ok(Some(coords)) => {
                     Ok((coords.from,coords.to))
@@ -27,6 +28,11 @@ impl Game {
                     eprintln!("{}",error);
                     std::process::exit(1);
                 },
+            }
+            #[cfg(not(feature="broker"))]
+            {
+                eprintln!("broker feature not enabled");
+                std::process::exit(1);
             }
         }
     }
@@ -43,6 +49,9 @@ impl Game {
         game_suggest.set_options(options);
         if let (_, Some(suggestion),_,_) = game_suggest.suggest_action() {
             println!("Suggestion: {}",suggestion);
+            if self.options().broker.is_some() {
+                println!("Getting next move with auto-retry from game broker...");
+            }
             loop {
                 match self.console_read_move() {
                     Ok((from,to)) => {
@@ -57,8 +66,8 @@ impl Game {
                         std::process::exit(0);
                     },
                     Err(s) if s == "broker retry" => {
-                        println!("Trying broker again in 500ms");
-                        std::thread::sleep(instant::Duration::from_millis(500));
+                        // println!("Trying broker again in 100ms");
+                        std::thread::sleep(instant::Duration::from_millis(100));
                     },
                     _ => {
                         println!();

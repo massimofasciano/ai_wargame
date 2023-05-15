@@ -27,6 +27,9 @@ fn main() {
     opts.optopt("m", "moves", "maximum moves in a game", "INT");
     opts.optopt("H", "heuristics", "select heuristics set to use", "e1|e2|e3e4");
 
+    #[cfg(feature="broker")]
+    opts.optopt("b", "broker", "specify url of game broker to use for moves", "URL");
+
     opts.optflag("R", "no-rand-traversal", "disable random traversal of possible actions");
     opts.optflag("A", "no-auto-depth", "don't try to auto adjust the search depth dynamically");
     opts.optflag("b", "benchmark", "determine starting max-depth via benchmark");
@@ -117,7 +120,10 @@ fn main() {
         }
     }
 
-    options.broker = Some("http://localhost:8001/test".to_string());
+    #[cfg(feature="broker")]
+    {
+        options.broker = matches.opt_str("broker");
+    }
 
     let mut game = Game::new(options);
 
