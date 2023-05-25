@@ -1,6 +1,6 @@
 use std::process::exit;
 
-use ai_wargame::{Game, GameOptions};
+use ai_wargame::{Game, GameOptions, Player};
 
 fn print_usage(program: &str, opts: getopts::Options) {
     let my_name = option_env!("CARGO_PKG_NAME").unwrap_or(program);
@@ -14,6 +14,7 @@ enum PlayType {
     Defend,
     #[default]
     Attack,
+    Manual,
 }
 
 fn main() {
@@ -21,7 +22,7 @@ fn main() {
     let program = args[0].clone();
 
     let mut opts = getopts::Options::new();
-    opts.optopt("p", "play", "type of gameplay", "auto|defend(er)|attack(er)");
+    opts.optopt("p", "play", "type of gameplay", "auto|defend(er)|attack(er)|manual");
     opts.optopt("d", "depth", "maximum search depth", "INT");
     opts.optopt("s", "seconds", "maximum search time in seconds", "FLOAT");
     opts.optopt("m", "moves", "maximum moves in a game", "INT");
@@ -71,6 +72,9 @@ fn main() {
         },
         Some("defender") | Some("defend") => {
             PlayType::Defend
+        },
+        Some("manual") => {
+            PlayType::Manual
         },
         Some(_) => {
             print_usage(&program, opts);
@@ -146,24 +150,16 @@ fn main() {
             break;
         }
 
-        match play_type {
-            PlayType::Auto => {
-                game.console_computer_play_turn();
-            },
-            PlayType::Defend => {
-                game.console_computer_play_turn();
-                println!();
-                game.console_pretty_print();
-                println!();
+        match (&play_type, game.player()) {
+            (PlayType::Defend, Player::Defender) | 
+            (PlayType::Attack, Player::Attacker) |
+            (PlayType::Manual, _) 
+            => {
                 game.console_human_play_turn();
             },
-            PlayType::Attack => {
-                game.console_human_play_turn();
-                println!();
-                game.console_pretty_print();
-                println!();
+            _ => {
                 game.console_computer_play_turn();
-            }
+            },
         }
     }
 }
