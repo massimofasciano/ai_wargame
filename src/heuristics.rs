@@ -153,9 +153,14 @@ pub fn score_heuristic() -> Heuristic {
     units_score_health_weights_bias(1,1,1,0,unit_score)
 }
 
+// pub fn default_attacker_heuristic() -> Heuristic {
+//     units_score_health_weights_bias(1,1,50, 1, unit_score)
+//         + ai_distance(2,1)
+//         - game_moves()
+// }
 pub fn default_attacker_heuristic() -> Heuristic {
     units_score_health_weights_bias(1,1,50, 1, unit_score)
-        + ai_distance(2,1)
+        + potential_health_delta()
         - game_moves()
 }
 
@@ -165,7 +170,7 @@ pub fn default_defender_heuristic() -> Heuristic {
 
 pub fn ai_distance(weight_friend: HeuristicScore, weight_opponent: HeuristicScore) -> Heuristic {
     Heuristic::new(move|game: &Game, player : Player| {
-        game.unit_coord_pairs().map(|pair| {
+        game.unit_coord_pairs().map(|(pair,_,_)| {
             let from_cell = game.get_cell(pair.from).expect("valid coord");
             let from_player = from_cell.player().expect("not empty");
             let from_unit_type = from_cell.unit().expect("not empty").unit_type;
@@ -183,6 +188,33 @@ pub fn ai_distance(weight_friend: HeuristicScore, weight_opponent: HeuristicScor
                 0
             }
         }).sum::<HeuristicScore>()
+    })
+}
+
+pub fn potential_health_delta() -> Heuristic {
+    Heuristic::new(move|game: &Game, player : Player| {
+        game.unit_coord_pairs().map(|(coords,from_cell,to_cell)| {
+            let (from_player, from_unit) = from_cell.player_unit().expect("cell not empty");
+            let (to_player, to_unit) = to_cell.player_unit().expect("cell not empty");
+            let mut health_delta = if from_player == to_player {
+                from_unit.unit_type.repair_amount(&to_unit.unit_type) as HeuristicScore
+                * unit_score(to_unit.unit_type)
+            } else {
+                from_unit.unit_type.damage_amount(&to_unit.unit_type) as HeuristicScore
+                * unit_score(to_unit.unit_type)
+                -
+                to_unit.unit_type.damage_amount(&from_unit.unit_type) as HeuristicScore
+                * unit_score(from_unit.unit_type)
+            };
+            if &player != from_player {
+                health_delta = -health_delta;
+            }
+            let dist = coords.moves_distance();
+            if dist > 0 {
+                health_delta /= dist as HeuristicScore
+            }
+            health_delta
+        }).sum()
     })
 }
 
@@ -231,7 +263,7 @@ fn units_score_health_cell(cell: &BoardCell, current_player: &Player,
 pub fn unit_score(unit_type: UnitType) -> HeuristicScore {
     use UnitType::*;
     match unit_type {
-        AI => 0, // already included in end of game score
+        AI => 10,
         Virus => 3,
         Tech => 3,
         Firewall => 1,

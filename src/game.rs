@@ -1,4 +1,4 @@
-use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo, DEFAULT_MAX_MOVES, DEFAULT_MAX_SECONDS, Unit};
+use crate::{Coord, UnitType, BoardCell, Dim, Player, Board, DisplayFirstLetter, Action, ActionOutcome, CoordPair, BoardCellData, HeuristicScore, DEFAULT_MAX_DEPTH, DEFAULT_BOARD_DIM, heuristics::{self, MIN_HEURISTIC_SCORE, MAX_HEURISTIC_SCORE}, Heuristics, DEFAULT_MIN_DEPTH, IsUsefulInfo, DEFAULT_MAX_MOVES, DEFAULT_MAX_SECONDS};
 
 #[cfg(feature="stats")]
 use crate::{number_digits_precision_to_string, rescale_number_to_string};
@@ -542,7 +542,7 @@ impl Game {
         let rect_iter = source.rect_around(1).rect_iter();
         rect_iter.filter_map(move|target|self.action_from_coords(source, target).ok())
     }
-    pub fn player_unit_coords(&self, player: Player) -> impl Iterator<Item = (Coord,&Unit)> + '_ {
+    pub fn player_unit_coords(&self, player: Player) -> impl Iterator<Item = (Coord,&BoardCell)> + '_ {
         self.state.board.iter_player_unit_coords(player)
     }
     pub fn player_units(&self, player: Player) -> impl Iterator<Item = &BoardCell> + '_ {
@@ -551,10 +551,14 @@ impl Game {
     pub fn units(&self) -> impl Iterator<Item = &BoardCell> + '_ {
         self.state.board.iter_units()
     }
-    pub fn unit_coord_pairs(&self) -> impl Iterator<Item = CoordPair> + '_ {
-        self.state.board.iter_unit_coords().flat_map(|(from,_)| 
-            self.state.board.iter_unit_coords().filter_map(move|(to,_)| 
-                if from==to {None} else {Some(CoordPair::new(from,to))}))
+    pub fn unit_coord_pairs(&self) -> impl Iterator<Item = (CoordPair,&BoardCell,&BoardCell)> + '_ {
+        self.state.board.iter_unit_coords().flat_map(|(from,from_unit)| 
+            self.state.board.iter_unit_coords().filter_map(move|(to,to_unit)| 
+                if from==to {
+                    None
+                } else {
+                    Some((CoordPair::new(from,to),from_unit,to_unit))
+                }))
     }
     pub fn heuristic(&self, player: Player, maximizing_player: bool, depth: usize, opt_end_game_result: Option<Option<Player>>) -> HeuristicScore {
         let result = if let Some(end_game_result) = opt_end_game_result {

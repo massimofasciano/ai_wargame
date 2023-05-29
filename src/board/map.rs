@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, Player, CoordPair, BoardCellData, Unit};
+use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, Player, CoordPair, BoardCellData};
 
 type BoardData = HashMap<Coord,BoardCell>;
 
@@ -117,19 +117,19 @@ impl Board {
                 cell.is_unit() && cell.player().unwrap() == player
         })
     }
-    pub fn iter_unit_coords(&self) -> impl Iterator<Item=(Coord,&Unit)> + '_ {
+    pub fn iter_unit_coords(&self) -> impl Iterator<Item=(Coord,&BoardCell)> + '_ {
         self.data.iter().filter_map(|(coord,cell)| {
             if cell.is_unit() {
-                Some((*coord,cell.unit().expect("cell contains unit")))
+                Some((*coord,cell))
             } else {
                 None
             }
         })
     }
-    pub fn iter_player_unit_coords(&self, player: Player) -> impl Iterator<Item=(Coord,&Unit)> + '_ {
+    pub fn iter_player_unit_coords(&self, player: Player) -> impl Iterator<Item=(Coord,&BoardCell)> + '_ {
         self.data.iter().filter_map(move|(coord, cell)|{
             if cell.is_unit() && cell.player().unwrap() == player {
-                Some((*coord,cell.unit().expect("cell contains unit")))
+                Some((*coord,cell))
             } else {
                 None
             }
