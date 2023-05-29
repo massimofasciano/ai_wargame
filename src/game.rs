@@ -40,6 +40,8 @@ pub struct GameState {
     board: Board,
     total_moves: usize,
     deadlock : bool,
+    attacker_has_ai: bool,
+    defender_has_ai: bool,
 }
 
 impl GameState {
@@ -49,6 +51,8 @@ impl GameState {
             board: Board::new(dim),
             total_moves: 0,
             deadlock: false,
+            attacker_has_ai: false,
+            defender_has_ai: false,
         }
     }
 }
@@ -65,6 +69,8 @@ impl GameState {
             total_moves: self.total_moves,
             board: self.board,
             deadlock: self.deadlock,
+            attacker_has_ai: self.attacker_has_ai,
+            defender_has_ai: self.defender_has_ai,
         }
     }
 }
@@ -149,6 +155,8 @@ impl Game {
         for (row,col,unit_type) in init_p2 {
             game.set_cell((row,col),BoardCell::new_unit(p2, unit_type));
         }
+        game.state.attacker_has_ai = true;
+        game.state.defender_has_ai = true;
         game
     }
     pub fn into_shallow_copy(self) -> Self {
@@ -335,33 +343,15 @@ impl Game {
             // if deadlocked, we couldn't play a move so other player wins
             return Some(self.player().next())
         } 
-        let p1 = Player::default();
-        let p2 = p1.next();
-        let wins_by_default = p2;
+        let wins_by_default = Player::Defender;
         if self.options.max_moves.is_some() && self.total_moves() >= self.options.max_moves.unwrap() {
             return Some(wins_by_default)
         } 
-        let mut ai_p1 = false;
-        let mut ai_p2 = false;
-        for c in self.state.board.iter_units() {
-            if let Some((player,unit)) = c.player_unit() {
-                if player == &p1 && unit.unit_type == UnitType::AI {
-                    ai_p1 = true;
-                }
-                if player == &p2 && unit.unit_type == UnitType::AI {
-                    ai_p2 = true;
-                }
-            }
-            if ai_p1 && ai_p2 { break }
-        }
-        if ai_p1 && !ai_p2 {
-            Some(p1)
-        } else if ai_p2 && !ai_p1 {
-            Some(p2)
-        } else if !ai_p2 && !ai_p1 {
-            Some(wins_by_default)
-        } else {
-            None
+        match (self.state.attacker_has_ai,self.state.defender_has_ai) {
+            (true, true) => None,
+            (true, false) => Some(Player::Attacker),
+            (false, true) => Some(Player::Defender),
+            (false, false) => Some(wins_by_default),
         }
     }
     pub fn parse_move(move_str: &str) -> Option<(Coord,Coord)> {
@@ -392,13 +382,19 @@ impl Game {
     }
     pub fn remove_dead(&mut self, coord: Coord) {
         if let Some(cell) = self.get_cell(coord) {
-            if let Some((_, unit)) = cell.player_unit() {
+            if let Some((player, unit)) = cell.player_unit() {
                 if unit.health == 0 {
+                    if unit.unit_type == UnitType::AI {
+                        match *player {
+                            Player::Attacker => self.state.attacker_has_ai = false,
+                            Player::Defender => self.state.defender_has_ai = false,
+                        }
+                    }
                     self.remove_cell(coord);
                 }
             }
         }
-    }
+}
     pub fn perform_action(&mut self, action: Action) -> Result<ActionOutcome,anyhow::Error> {
         match action {
             Action::Pass => Ok(ActionOutcome::Passed),
