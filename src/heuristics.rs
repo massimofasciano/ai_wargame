@@ -193,28 +193,29 @@ pub fn ai_distance(weight_friend: HeuristicScore, weight_opponent: HeuristicScor
 
 pub fn potential_health_delta() -> Heuristic {
     Heuristic::new(move|game: &Game, player : Player| {
-        game.unit_coord_pairs().map(|(coords,from_cell,to_cell)| {
-            let (from_player, from_unit) = from_cell.player_unit().expect("cell not empty");
-            let (to_player, to_unit) = to_cell.player_unit().expect("cell not empty");
-            let mut health_delta = if from_player == to_player {
-                from_unit.unit_type.repair_amount(&to_unit.unit_type) as HeuristicScore
-                * unit_score(to_unit.unit_type)
-            } else {
-                from_unit.unit_type.damage_amount(&to_unit.unit_type) as HeuristicScore
-                * unit_score(to_unit.unit_type)
-                -
-                to_unit.unit_type.damage_amount(&from_unit.unit_type) as HeuristicScore
-                * unit_score(from_unit.unit_type)
-            };
-            if &player != from_player {
-                health_delta = -health_delta;
-            }
-            let dist = coords.moves_distance();
-            if dist > 0 {
-                health_delta /= dist as HeuristicScore
-            }
-            health_delta
-        }).sum()
+        let mut total_delta = 0;
+        for (from, from_cell) in game.player_unit_coords(player) {
+            let (from_player, from_unit) = from_cell.player_unit().expect("from cell should not be empty");
+            for to in from.iter_neighbors() {
+                if let Some(to_cell) = game.get_cell(to) {
+                    if to_cell.is_empty() {
+                        continue;
+                    }
+                    let (to_player, to_unit) = to_cell.player_unit().expect("to cell should not be empty");
+                    total_delta += if from_player == to_player {
+                        to_unit.unit_type.repair_amount(&from_unit.unit_type) as HeuristicScore
+                        * unit_score(from_unit.unit_type)
+                    } else {
+                        from_unit.unit_type.damage_amount(&to_unit.unit_type) as HeuristicScore
+                        * unit_score(to_unit.unit_type)
+                        -
+                        to_unit.unit_type.damage_amount(&from_unit.unit_type) as HeuristicScore
+                        * unit_score(from_unit.unit_type)
+                    };
+                }
+            }   
+        }
+        total_delta
     })
 }
 
