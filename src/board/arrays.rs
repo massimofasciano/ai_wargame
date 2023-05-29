@@ -1,4 +1,4 @@
-use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, CoordPair, Player, BoardCellData};
+use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, CoordPair, Player, BoardCellData, Unit};
 
 use duplicate::duplicate_item;
 
@@ -103,21 +103,29 @@ impl<I> T {
                 cell.is_unit() && cell.player().unwrap() == player
         })
     }
-    pub fn iter_unit_coords(&self) -> impl Iterator<Item=Coord> + '_ {
-        self.rect_iter().filter(|coord| {
-            if let Some(cell) = self.get(*coord) {
-                cell.is_unit()
+    pub fn iter_unit_coords(&self) -> impl Iterator<Item=(Coord,&Unit)> + '_ {
+        self.rect_iter().filter_map(|coord| {
+            if let Some(cell) = self.get(coord) {
+                if cell.is_unit() {
+                    Some((coord,cell.unit().expect("cell contains unit")))
+                } else {
+                    None
+                }
             } else {
-                false
+                None
             }
         })
     }
-    pub fn iter_player_unit_coords(&self, player: Player) -> impl Iterator<Item=Coord> + '_ {
-        self.rect_iter().filter(move|coord| {
-            if let Some(cell) = self.get(*coord) {
-                cell.is_unit() && cell.player().unwrap() == player
+    pub fn iter_player_unit_coords(&self, player: Player) -> impl Iterator<Item=(Coord,&Unit)> + '_ {
+        self.rect_iter().filter_map(move|coord| {
+            if let Some(cell) = self.get(coord) {
+                if cell.is_unit() && cell.player().unwrap() == player {
+                    Some((coord,cell.unit().expect("cell contains unit")))
+                } else {
+                    None
+                }
             } else {
-                false
+                None
             }
         })
     }

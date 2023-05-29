@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, Player, CoordPair, BoardCellData};
+use crate::{Coord, BoardCell, Dim, DEFAULT_BOARD_DIM, Player, CoordPair, BoardCellData, Unit};
 
 type BoardData = HashMap<Coord,BoardCell>;
 
@@ -117,17 +117,23 @@ impl Board {
                 cell.is_unit() && cell.player().unwrap() == player
         })
     }
-    pub fn iter_unit_coords(&self) -> impl Iterator<Item=Coord> + '_ {
-        self.data.keys().map(Coord::clone)
-    }
-    pub fn iter_player_unit_coords(&self, player: Player) -> impl Iterator<Item=Coord> + '_ {
-        self.data.iter().filter_map(move|(coord, cell)|{
-            if cell.is_unit() && cell.player().unwrap() == player {
-                Some(coord)
+    pub fn iter_unit_coords(&self) -> impl Iterator<Item=(Coord,&Unit)> + '_ {
+        self.data.iter().filter_map(|(coord,cell)| {
+            if cell.is_unit() {
+                Some((*coord,cell.unit().expect("cell contains unit")))
             } else {
                 None
             }
-        }).map(Coord::clone)
+        })
+    }
+    pub fn iter_player_unit_coords(&self, player: Player) -> impl Iterator<Item=(Coord,&Unit)> + '_ {
+        self.data.iter().filter_map(move|(coord, cell)|{
+            if cell.is_unit() && cell.player().unwrap() == player {
+                Some((*coord,cell.unit().expect("cell contains unit")))
+            } else {
+                None
+            }
+        })
     }
     pub fn rect(&self) -> CoordPair {
         CoordPair::from_dim(self.dim())
