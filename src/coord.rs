@@ -36,9 +36,9 @@ impl Coord {
         let row_char = if row < 0 {
             '?'
         } else if row < 26 {
-            (row as u8 +'A' as u8) as char
+            (row as u8 + b'A') as char
         } else if row < 52 {
-            (row as u8-26 +'a' as u8) as char
+            (row as u8-26 + b'a') as char
         } else {
             '?'
         };
@@ -64,7 +64,7 @@ impl Coord {
         range >= 0 &&
         ((to.row - from.row).abs() + (to.col - from.col).abs()) as Dim <= range
     }
-    pub fn iter_neighbors<'a>(&'a self) -> impl Iterator<Item = Coord> + 'a {
+    pub fn iter_neighbors(&self) -> impl Iterator<Item = Coord> + '_ {
         let neighbor_coords = vec![(0,-1),(-1,0),(1,0),(0,1)];
         neighbor_coords.into_iter().map(|c|Coord::from_tuple(c)+*self)
     }

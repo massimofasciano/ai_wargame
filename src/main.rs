@@ -49,7 +49,7 @@ fn main() {
         Ok(m) => { m }
         Err(f) => {
             print_usage(&program, opts);
-            println!("\n{}",f.to_string());
+            println!("\n{}",f);
             exit(1)
         }
     };

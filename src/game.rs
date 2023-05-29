@@ -244,7 +244,7 @@ impl Game {
     pub fn is_valid_position(&self, coord : Coord) -> bool {
         let (row,col) = coord.to_tuple();
         let is_valid = row >= 0 && col >= 0 && row < self.dim() && col < self.dim();
-        debug_assert_eq!(is_valid,true,"({},{}) is not valid for a {}x{} board",row,col,self.dim(),self.dim());
+        debug_assert!(is_valid,"({},{}) is not valid for a {}x{} board",row,col,self.dim(),self.dim());
         is_valid
     }
     pub fn is_valid_move(&self, from: Coord, to: Coord) -> bool {
@@ -384,10 +384,10 @@ impl Game {
     pub fn rect_iter(&self) -> impl Iterator<Item = Coord> {
         self.board_rect().rect_iter()
     }
-    pub fn empty_coords<'a>(&'a self) -> impl Iterator<Item = Coord> + 'a {
+    pub fn empty_coords(&self) -> impl Iterator<Item = Coord> + '_ {
         self.state.board.empty_coords()
     }
-    pub fn player_coords<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
+    pub fn player_coords(&self, player: Player) -> impl Iterator<Item = Coord> + '_ {
         self.state.board.player_coords(player)
     }
     pub fn remove_dead(&mut self, coord: Coord) {
@@ -538,20 +538,20 @@ impl Game {
             Err(anyhow!("not in range or source is not friendly unit"))
         }
     }
-    pub fn possible_actions_from_coord<'a>(&'a self, source : Coord) -> impl Iterator<Item=Action> + 'a {
+    pub fn possible_actions_from_coord(&self, source : Coord) -> impl Iterator<Item=Action> + '_ {
         let rect_iter = source.rect_around(1).rect_iter();
         rect_iter.filter_map(move|target|self.action_from_coords(source, target).ok())
     }
-    pub fn player_unit_coords<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
+    pub fn player_unit_coords(&self, player: Player) -> impl Iterator<Item = Coord> + '_ {
         self.state.board.iter_player_unit_coords(player)
     }
-    pub fn player_units<'a>(&'a self, player: Player) -> impl Iterator<Item = &BoardCell> + 'a {
+    pub fn player_units(&self, player: Player) -> impl Iterator<Item = &BoardCell> + '_ {
         self.state.board.iter_player_units(player)
     }
-    pub fn units<'a>(&'a self) -> impl Iterator<Item = &BoardCell> + 'a {
+    pub fn units(&self) -> impl Iterator<Item = &BoardCell> + '_ {
         self.state.board.iter_units()
     }
-    pub fn unit_coord_pairs<'a>(&'a self) -> impl Iterator<Item = CoordPair> + 'a {
+    pub fn unit_coord_pairs(&self) -> impl Iterator<Item = CoordPair> + '_ {
         self.state.board.iter_unit_coords().flat_map(|from| 
             self.state.board.iter_unit_coords().filter_map(move|to| 
                 if from==to {None} else {Some(CoordPair::new(from,to))}))
@@ -878,7 +878,7 @@ impl Game {
                     writeln!(w,"Average eval depth: {:.1}",dc as f32/counts_total as f32)?;
                 }
                 if self.total_moves() > 0 {
-                    writeln!(w,"Average time per move: {:.1}",stats.total_seconds as f32/self.total_moves() as f32)?; 
+                    writeln!(w,"Average time per move: {:.1}",stats.total_seconds/self.total_moves() as f32)?; 
                 }
                 if stats.total_effective_branches > 0 {
                     writeln!(w,"Average branching factor: {:.1}",stats.total_moves_per_effective_branch as f32/stats.total_effective_branches as f32)?; 
@@ -905,7 +905,7 @@ impl Game {
         }
         writeln!(w)?;
         for row in 0..self.dim() {
-            write!(w,"{:>2}: ",(row as u8 +'A' as u8) as char)?;
+            write!(w,"{:>2}: ",(row as u8 + b'A') as char)?;
             for col in 0..self.dim() {
                 let cell = self[Coord::new(row,col)];
                 write!(w," {}",cell.to_pretty_compact_string())?;

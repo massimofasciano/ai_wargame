@@ -44,7 +44,7 @@ impl Game {
         write!(w,"<tbody>")?;
         for row in 0..self.dim() {
             write!(w,"<tr>")?;
-            write!(w,"<th class=\"{}_row_name\">{}</th>",css_class,(row as u8 +'A' as u8) as char)?;
+            write!(w,"<th class=\"{}_row_name\">{}</th>",css_class,(row as u8 + b'A') as char)?;
             for col in 0..self.dim() {
                 let cell = self[Coord::new(row,col)];
                 write!(w,"<td id=\"{id}-{row}-{col}\" class=\"{css_class}_cell\" onclick=\"{fn_click}({row},{col})\">")?;

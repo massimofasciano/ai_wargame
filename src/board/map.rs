@@ -43,7 +43,7 @@ impl Board {
     fn is_valid_position(&self, coord : Coord) -> bool {
         let (row,col) = coord.to_tuple();
         let is_valid = row >= 0 && col >= 0 && row < self.dim && col < self.dim;
-        debug_assert_eq!(is_valid,true,"({},{}) is not valid for a {}x{} board",row,col,self.dim,self.dim);
+        debug_assert!(is_valid,"({},{}) is not valid for a {}x{} board",row,col,self.dim,self.dim);
         is_valid
     }
     pub fn remove(&mut self, coord: Coord) -> Option<BoardCell> {
@@ -111,15 +111,15 @@ impl Board {
     pub fn iter_units(&self) -> std::collections::hash_map::Values<Coord, BoardCell> {
         self.data.values()
     }
-    pub fn iter_player_units<'a>(&'a self, player: Player) -> impl Iterator<Item=&BoardCell> + 'a {
+    pub fn iter_player_units(&self, player: Player) -> impl Iterator<Item=&BoardCell> + '_ {
         self.data.values().filter(move|cell|{
                 cell.is_unit() && cell.player().unwrap() == player
         })
     }
-    pub fn iter_unit_coords<'a>(&'a self) -> impl Iterator<Item=Coord> + 'a {
+    pub fn iter_unit_coords(&self) -> impl Iterator<Item=Coord> + '_ {
         self.data.keys().map(Coord::clone)
     }
-    pub fn iter_player_unit_coords<'a>(&'a self, player: Player) -> impl Iterator<Item=Coord> + 'a {
+    pub fn iter_player_unit_coords(&self, player: Player) -> impl Iterator<Item=Coord> + '_ {
         self.data.iter().filter_map(move|(coord, cell)|{
             if cell.is_unit() && cell.player().unwrap() == player {
                 Some(coord)
@@ -134,10 +134,10 @@ impl Board {
     pub fn rect_iter(&self) -> impl Iterator<Item = Coord> {
         self.rect().rect_iter()
     }
-    pub fn empty_coords<'a>(&'a self) -> impl Iterator<Item = Coord> + 'a {
+    pub fn empty_coords(&self) -> impl Iterator<Item = Coord> + '_ {
         self.rect_iter().filter(|&c|self.get(c).expect("valid coord").is_empty())
     }
-    pub fn player_coords<'a>(&'a self, player: Player) -> impl Iterator<Item = Coord> + 'a {
+    pub fn player_coords(&self, player: Player) -> impl Iterator<Item = Coord> + '_ {
         self.data.iter().filter_map(move|(&coord,cell)|
             if cell.player().expect("should be a unit") == player { Some(coord) } else { None }
         )

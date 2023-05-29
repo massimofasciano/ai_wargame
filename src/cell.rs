@@ -1,16 +1,9 @@
 use crate::{UnitType, Player, Unit, DisplayFirstLetter};
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 #[repr(transparent)]
 pub struct BoardCell {
     data: Option<BoardCellData>,
-}
-
-impl Default for BoardCell {
-    fn default() -> Self {
-        // empty cell
-        Self { data: None }
-    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -50,10 +43,7 @@ impl BoardCell {
         self.data.is_none()
     }
     pub fn is_unit(&self) -> bool {
-        match self.data {
-            Some(BoardCellData::Unit { player: _, unit: _ }) => true,
-            _ => false,
-        }
+        matches!(self.data, Some(BoardCellData::Unit { player: _, unit: _ }))
     }
     pub fn player(&self) -> Option<Player> {
         match self.data {

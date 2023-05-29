@@ -78,11 +78,10 @@ pub trait IsUsefulInfo {
 
 impl IsUsefulInfo for ActionOutcome {
     fn is_useful_info(&self) -> bool {
-        match self {
-            Self::Damaged { to_source: _, to_target: _ } => true,
-            Self::Repaired { amount: _ } => true,
-            Self::SelfDestructed { total_damage: _ } => true,
-            _ => false,
-        }
+        matches!(self, 
+            Self::Damaged { to_source: _, to_target: _ } | 
+            Self::Repaired { amount: _ } | 
+            Self::SelfDestructed { total_damage: _ }
+        )
     }
 }

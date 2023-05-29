@@ -57,17 +57,11 @@ impl UnitType {
     }
     pub fn can_move_back(&self) -> bool {
         use UnitType::*;
-        match self {
-            Virus | Tech => true,
-            _ => false,
-        }
+        matches!(self, Virus | Tech)
     }
     pub fn can_move_while_engaged(&self) -> bool {
         use UnitType::*;
-        match self {
-            Virus | Tech => true,
-            _ => false,
-        }
+        matches!(self, Virus | Tech)
     }
     pub fn initial_health(&self) -> Health {
         9
@@ -88,9 +82,7 @@ impl UnitType {
                 Virus => 6,
                 _ => 1,
             },
-            Firewall => match target {
-                _ => 1,
-            },
+            Firewall => 1,
             Program => match target {
                 Firewall => 1,
                 _ => 3,
