@@ -31,6 +31,7 @@ impl Coord {
     pub const fn from_dim_vert(dim: Dim) -> Self {
         Self::new(dim, 0)
     }
+    #[allow(clippy::result_unit_err)]
     pub fn try_to_string_as_letter_number(&self) -> Result<String,()> {
         let (row,col) = (self.row,self.col);
         let row_char = if row < 0 {

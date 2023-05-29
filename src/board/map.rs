@@ -24,6 +24,7 @@ impl Board {
     pub fn size(&self) -> usize {
         self.data.len()
     }
+    #[allow(clippy::len_without_is_empty)]
     pub const fn len(&self) -> usize {
         let dim = self.dim as usize;
         dim * dim

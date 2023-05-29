@@ -41,9 +41,15 @@ impl Action {
     }
 }
 
-impl Into<Option<CoordPair>> for Action {
-    fn into(self) -> Option<CoordPair> {
-        self.into_coord_pair()
+// impl Into<Option<CoordPair>> for Action {
+//     fn into(self) -> Option<CoordPair> {
+//         self.into_coord_pair()
+//     }
+// }
+
+impl From<Action> for Option<CoordPair> {
+    fn from(val: Action) -> Self {
+        val.into_coord_pair()
     }
 }
 

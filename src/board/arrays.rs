@@ -14,6 +14,7 @@ pub use vec::Board;
 
 #[duplicate_item(I T D; [const SIZE: usize] [array::BoardArray<SIZE>] [array::BoardData<SIZE>]; [] [vec::Board] [vec::BoardData])]
 impl<I> T {
+    #[allow(clippy::len_without_is_empty)]
     pub const fn len(&self) -> usize {
         let dim = self.dim as usize;
         dim * dim

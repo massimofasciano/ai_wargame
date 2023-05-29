@@ -154,9 +154,9 @@ impl Game {
     pub fn into_shallow_copy(self) -> Self {
         Self {
             state: self.state.into_shallow_copy(),
-            options: self.options.clone(),
+            options: self.options,
             #[cfg(feature="stats")]
-            stats: self.stats.clone(),
+            stats: self.stats,
         }
     }
     pub fn dim(&self) -> Dim {
