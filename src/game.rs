@@ -547,6 +547,9 @@ impl Game {
     pub fn units(&self) -> impl Iterator<Item = &BoardCell> + '_ {
         self.state.board.iter_units()
     }
+    pub fn unit_coords(&self) -> impl Iterator<Item = (Coord,&BoardCell)> + '_ {
+        self.state.board.iter_unit_coords()
+    }
     pub fn unit_coord_pairs(&self) -> impl Iterator<Item = (CoordPair,&BoardCell,&BoardCell)> + '_ {
         self.state.board.iter_unit_coords().flat_map(|(from,from_unit)| 
             self.state.board.iter_unit_coords().filter_map(move|(to,to_unit)| 

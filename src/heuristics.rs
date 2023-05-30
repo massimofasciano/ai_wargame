@@ -153,15 +153,11 @@ pub fn score_heuristic() -> Heuristic {
     units_score_health_weights_bias(1,1,1,0,unit_score)
 }
 
-// pub fn default_attacker_heuristic() -> Heuristic {
-//     units_score_health_weights_bias(1,1,50, 1, unit_score)
-//         + ai_distance(2,1)
-//         - game_moves()
-// }
 pub fn default_attacker_heuristic() -> Heuristic {
-    units_score_health_weights_bias(1,1,50, 1, unit_score)
-        + potential_health_delta()
-        - game_moves()
+    units_score_health_weights_bias(1,1,50, 1, unit_score) * 10
+        + local_combat() * 5
+        + ai_distance(5, 1)
+        - game_moves() * 10
 }
 
 pub fn default_defender_heuristic() -> Heuristic {
@@ -170,52 +166,57 @@ pub fn default_defender_heuristic() -> Heuristic {
 
 pub fn ai_distance(weight_friend: HeuristicScore, weight_opponent: HeuristicScore) -> Heuristic {
     Heuristic::new(move|game: &Game, player : Player| {
-        game.unit_coord_pairs().map(|(pair,_,_)| {
-            let from_cell = game.get_cell(pair.from).expect("valid coord");
+        game.unit_coord_pairs().map(|(pair,from_cell,to_cell)| {
             let from_player = from_cell.player().expect("not empty");
             let from_unit_type = from_cell.unit().expect("not empty").unit_type;
-            let to_cell = game.get_cell(pair.to).expect("valid coord");
             let to_player = to_cell.player().expect("not empty");
             let to_unit_type = to_cell.unit().expect("not empty").unit_type;
             let dist = pair.moves_distance() as HeuristicScore;
             if from_player == player && to_player != player && 
                 from_unit_type != UnitType::AI && from_unit_type != UnitType::Tech && to_unit_type == UnitType::AI {
-                -dist * from_unit_type.damage_amount(&to_unit_type) as HeuristicScore * weight_friend
+                weight_friend as f32 * from_unit_type.damage_amount(&to_unit_type) as f32 / dist as f32
             } else if from_player != player && to_player == player && 
                 from_unit_type != UnitType::AI && from_unit_type != UnitType::Tech && to_unit_type == UnitType::AI {
-                dist * from_unit_type.damage_amount(&to_unit_type) as HeuristicScore * weight_opponent
+                weight_opponent as f32 * from_unit_type.damage_amount(&to_unit_type) as f32 / -dist as f32
             } else {
-                0
+                0.0
             }
-        }).sum::<HeuristicScore>()
+        }).sum::<f32>() as HeuristicScore
     })
 }
 
-pub fn potential_health_delta() -> Heuristic {
+pub fn local_combat() -> Heuristic {
     Heuristic::new(move|game: &Game, player : Player| {
-        let mut total_delta = 0;
-        for (from, from_cell) in game.player_unit_coords(player) {
+        let mut total_score = 0;
+        for (from, from_cell) in game.unit_coords() {
             let (from_player, from_unit) = from_cell.player_unit().expect("from cell should not be empty");
+            let mut best_score = 0;
             for to in from.iter_neighbors() {
                 if let Some(to_cell) = game.get_cell(to) {
                     if to_cell.is_empty() {
                         continue;
                     }
                     let (to_player, to_unit) = to_cell.player_unit().expect("to cell should not be empty");
-                    total_delta += if from_player == to_player {
-                        to_unit.unit_type.repair_amount(&from_unit.unit_type) as HeuristicScore
-                        * unit_score(from_unit.unit_type)
-                    } else {
-                        from_unit.unit_type.damage_amount(&to_unit.unit_type) as HeuristicScore
-                        * unit_score(to_unit.unit_type)
-                        -
-                        to_unit.unit_type.damage_amount(&from_unit.unit_type) as HeuristicScore
-                        * unit_score(from_unit.unit_type)
+                    if from_player != to_player {
+                        let dmg_to = from_unit.unit_type.damage_amount(&to_unit.unit_type);
+                        let dmg_from = to_unit.unit_type.damage_amount(&from_unit.unit_type);
+                        let health_to = to_unit.health;
+                        let health_from = from_unit.health;
+                        let from_rounds_alive = (health_from + dmg_to - 1) / dmg_to;
+                        let to_rounds_alive = (health_to + dmg_from - 1) / dmg_from;
+                        if from_rounds_alive > to_rounds_alive {
+                            best_score = unit_score(from_unit.unit_type);
+                        }
                     };
                 }
-            }   
+            }
+            if &player == from_player {
+                total_score += best_score;   
+            } else {
+                total_score -= best_score;   
+            }
         }
-        total_delta
+        total_score
     })
 }
 
