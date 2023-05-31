@@ -1,4 +1,4 @@
-use crate::{Game, BoardCell, Player, UnitType};
+use crate::{Game, BoardCell, Player, UnitType, MAX_HEALTH};
 
 use std::{ops::{Deref, Add, Mul, Sub, Neg}, sync::Arc};
 use rand::Rng;
@@ -191,6 +191,20 @@ pub fn local_combat() -> Heuristic {
         for (from, from_cell) in game.unit_coords() {
             let (from_player, from_unit) = from_cell.player_unit().expect("from cell should not be empty");
             let mut best_score = 0;
+            let mut from_rounds_alive = MAX_HEALTH;
+            for to in from.iter_neighbors() {
+                if let Some(to_cell) = game.get_cell(to) {
+                    if to_cell.is_empty() {
+                        continue;
+                    }
+                    let (to_player, to_unit) = to_cell.player_unit().expect("to cell should not be empty");
+                    if from_player != to_player {
+                        let dmg_from = to_unit.unit_type.damage_amount(&from_unit.unit_type);
+                        let health_from = from_unit.health;
+                        from_rounds_alive = std::cmp::min(from_rounds_alive,(health_from + dmg_from - 1) / dmg_from);
+                    };
+                }
+            }
             for to in from.iter_neighbors() {
                 if let Some(to_cell) = game.get_cell(to) {
                     if to_cell.is_empty() {
@@ -199,13 +213,10 @@ pub fn local_combat() -> Heuristic {
                     let (to_player, to_unit) = to_cell.player_unit().expect("to cell should not be empty");
                     if from_player != to_player {
                         let dmg_to = from_unit.unit_type.damage_amount(&to_unit.unit_type);
-                        let dmg_from = to_unit.unit_type.damage_amount(&from_unit.unit_type);
                         let health_to = to_unit.health;
-                        let health_from = from_unit.health;
-                        let from_rounds_alive = (health_from + dmg_to - 1) / dmg_to;
-                        let to_rounds_alive = (health_to + dmg_from - 1) / dmg_from;
+                        let to_rounds_alive = (health_to + dmg_to - 1) / dmg_to;
                         if from_rounds_alive > to_rounds_alive {
-                            best_score = unit_score(from_unit.unit_type);
+                            best_score = std::cmp::max(best_score,unit_score(from_unit.unit_type));
                         }
                     };
                 }
