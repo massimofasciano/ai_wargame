@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use reqwest::header::CONTENT_TYPE;
 use serde::{Serialize, Deserialize};
 
 use crate::{Coord, Game, CoordPair};
@@ -27,6 +28,7 @@ impl Game {
         let broker_url = self.options().broker.as_ref().ok_or(anyhow!("no broker"))?.clone();
         let res = client.post(broker_url)
             .body(serde_json::to_string(&data)?)
+            .header(CONTENT_TYPE, "application/json")
             .send()?;
         let status = res.status().as_u16();
         match status {

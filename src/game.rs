@@ -5,7 +5,7 @@ use crate::{number_digits_precision_to_string, rescale_number_to_string};
 
 use anyhow::anyhow;
 use smart_default::SmartDefault;
-use rand::{seq::{SliceRandom}};
+use rand::seq::SliceRandom;
 use std::sync::Arc;
 use instant::Instant;
 use std::io::Write as IoWrite;
@@ -356,7 +356,7 @@ impl Game {
     }
     pub fn parse_move(move_str: &str) -> Option<(Coord,Coord)> {
         use regex::Regex;
-        let re = Regex::new(r#"[ \(\[]*([A-Za-z])[ ,;]*(\d+)[ \)\]]*[;,]*[ \(\[]*([A-Za-z])[ ,;]*(\d+)[ \)\]]*"#).unwrap();
+        let re = Regex::new(r"[ \(\[]*([A-Za-z])[ ,;]*(\d+)[ \)\]]*[;,]*[ \(\[]*([A-Za-z])[ ,;]*(\d+)[ \)\]]*").unwrap();
         if let Some(caps) = re.captures(move_str) {
             assert_eq!(caps.len(),5);
             let r1 = caps[1].chars().next().unwrap().to_ascii_uppercase() as Dim - 65;

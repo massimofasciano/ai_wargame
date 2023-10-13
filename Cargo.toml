@@ -35,6 +35,7 @@ strip = true
 
 [features]
 default = ["base"]
+# default = ["console"]
 console = ["base", "broker"]
 web = ["base"]
 wasi = ["base"]
